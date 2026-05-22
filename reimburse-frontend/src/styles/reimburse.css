@@ -1,0 +1,307 @@
+:root {
+  --el-color-primary: #1890ff;
+  --reim-primary: #1890ff;
+  --reim-primary-hover: #40a9ff;
+  --reim-orange: #ff6600;
+  --reim-section-bg: #f5f7fa;
+  --reim-border: #e8e8e8;
+  --reim-text: #333;
+  --reim-text-secondary: #666;
+  --reim-content-width: 1200px;
+  --reim-form-header-height: 76px;
+  --reim-warning-bg: #fffbe6;
+  --reim-warning-border: #ffe58f;
+  --reim-total-bg: #fffbe6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  color: var(--reim-text);
+  background: #f0f2f5;
+}
+
+.reim-page {
+  min-height: 100vh;
+  padding: 16px 24px 24px;
+}
+
+.reim-link {
+  color: var(--reim-primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.reim-link:hover {
+  color: var(--reim-primary-hover);
+  text-decoration: underline;
+}
+
+.reim-section {
+  background: #fff;
+  border: 1px solid var(--reim-border);
+  margin-bottom: 12px;
+}
+
+.reim-section-header {
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  background: var(--reim-section-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+/* 分区标题：16px，高度 36px */
+.title-left {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--reim-text);
+  line-height: 36px;
+}
+
+.title-left::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  background: var(--reim-primary);
+  flex-shrink: 0;
+}
+
+.reim-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reim-section-action-btn {
+  color: var(--reim-primary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reim-section-action-btn:hover {
+  opacity: 0.8;
+}
+
+.reim-section-body {
+  padding: 16px;
+}
+
+.reim-form-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* 5.2.2.1 表头固定，不随纵向滚动 */
+.reim-form-header-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: #fff;
+  border-bottom: 1px solid var(--reim-border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.reim-form-header-fixed .reim-form-content {
+  padding: 16px 0 12px;
+}
+
+.reim-form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: var(--reim-form-header-height);
+  padding-bottom: 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.reim-form-content {
+  width: var(--reim-content-width);
+  max-width: var(--reim-content-width);
+  margin: 0 auto;
+  background: #fff;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* 单据标题：20px 加粗 */
+.reim-form-title {
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  margin: 0;
+  line-height: 28px;
+  color: var(--reim-text);
+}
+
+.reim-form-date {
+  text-align: right;
+  font-size: 14px;
+  color: var(--reim-text-secondary);
+  margin-top: 8px;
+  padding-right: 16px;
+  line-height: 20px;
+}
+
+.reim-form-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border-top: 1px solid var(--reim-border);
+  padding: 12px 0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.reim-form-footer-inner {
+  width: var(--reim-content-width);
+  max-width: var(--reim-content-width);
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* 单据页：其他字段 14px */
+.reim-form-content :deep(.el-form-item__label) {
+  font-size: 14px;
+  color: var(--reim-text);
+}
+
+.reim-form-content :deep(.el-form-item__content),
+.reim-form-content :deep(.el-input),
+.reim-form-content :deep(.el-select),
+.reim-form-content :deep(.el-textarea),
+.reim-form-content :deep(.el-input__inner),
+.reim-form-content :deep(.el-textarea__inner),
+.reim-form-content :deep(.el-select__wrapper),
+.reim-form-content :deep(.el-tree-select) {
+  font-size: 14px;
+}
+
+.reim-form-content :deep(.el-table),
+.reim-form-content :deep(.el-table th),
+.reim-form-content :deep(.el-table td),
+.reim-form-content :deep(.el-table .cell) {
+  font-size: 14px;
+  color: var(--reim-text);
+}
+
+.reim-form-content :deep(.el-button) {
+  font-size: 14px;
+}
+
+.reim-warning-bar {
+  background: var(--reim-warning-bg);
+  border: 1px solid var(--reim-warning-border);
+  padding: 8px 12px;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.reim-warning-bar .el-icon {
+  color: #faad14;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.reim-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reim-icon-btn {
+  color: var(--reim-primary);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.reim-icon-btn:hover {
+  opacity: 0.7;
+}
+
+.reim-total-row {
+  background: var(--reim-total-bg);
+}
+
+.reim-amount-right {
+  text-align: right;
+}
+
+.reim-orange {
+  color: var(--reim-orange);
+}
+
+.reim-list-card {
+  background: #fff;
+  padding: 16px;
+  border-radius: 2px;
+}
+
+.reim-query-form .el-form-item {
+  margin-bottom: 12px;
+}
+
+.reim-query-btns {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.reim-list-table .el-table th {
+  background: #fafafa !important;
+}
+
+.reim-subsidy-header-extra {
+  font-size: 14px;
+  color: var(--reim-text-secondary);
+  font-weight: normal;
+  margin-left: 6px;
+  line-height: 36px;
+}
+
+.title-left > :not(.reim-subsidy-header-extra) {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.expense-total-row {
+  font-size: 14px;
+  color: var(--reim-text);
+}
+
+.expense-total-row .total-label {
+  color: var(--reim-text-secondary);
+}
