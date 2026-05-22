@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Edit, MoreFilled, Operation } from '@element-plus/icons-vue'
 import type { ListQuery, ReimburseListItem } from '@/types/reimburse'
-import { DOC_STATUS_MAP } from '@/data/constants'
-import { useMasterData } from '@/composables/useMasterData'
-import { copyReimburse, deleteReimburse, fetchReimburseList } from '@/api/reimburse'
-import { formatMoney } from '@/utils/reimburse'
+import {
+  DOC_STATUS_MAP,
+  MOCK_LIST_DATA,
+  REIM_COMPANIES,
+  REIM_DEPARTMENTS,
+  REIMBURSERS,
+} from '@/data/mockData'
+import { formatMoney, genId } from '@/utils/reimburse'
 import { buildBusinessTypeTree } from '@/utils/businessTypeTree'
 
 const router = useRouter()
-const { companies, departments, reimbursers, businessTypes, ensureLoaded } = useMasterData()
 
 const query = reactive<ListQuery>({
   reimburseNo: '',
@@ -23,45 +26,39 @@ const query = reactive<ListQuery>({
   businessTypeId: '',
 })
 
-const tableData = ref<ReimburseListItem[]>([])
-const total = ref(0)
-const loading = ref(false)
+const allData = ref<ReimburseListItem[]>([...MOCK_LIST_DATA])
+const filteredData = ref<ReimburseListItem[]>([...MOCK_LIST_DATA])
+
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes.value))
+const total = computed(() => filteredData.value.length)
 
-async function loadList() {
-  loading.value = true
-  try {
-    const data = await fetchReimburseList({
-      ...query,
-      page: currentPage.value,
-      size: pageSize.value,
-    })
-    tableData.value = data.records
-    total.value = data.total
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '加载列表失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(async () => {
-  try {
-    await ensureLoaded()
-    await loadList()
-  } catch {
-    /* ensureLoaded 已设置错误 */
-  }
+const tableData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredData.value.slice(start, start + pageSize.value)
 })
 
-function handleSearch() {
+function filterData() {
+  filteredData.value = allData.value.filter((row) => {
+    if (query.reimburseNo && !row.reimburseNo.includes(query.reimburseNo)) return false
+    if (query.title && !row.title.includes(query.title)) return false
+    if (query.reason && !row.reason.includes(query.reason)) return false
+    if (query.companyId && row.companyId !== query.companyId) return false
+    if (query.departmentId && row.departmentId !== query.departmentId) return false
+    if (query.reimburserId && row.reimburserId !== query.reimburserId) return false
+    if (query.businessTypeId && row.businessTypeId !== query.businessTypeId) return false
+    return true
+  })
   currentPage.value = 1
-  loadList()
 }
 
+/** 5.1.2.2 搜索 */
+function handleSearch() {
+  filterData()
+}
+
+/** 5.1.2.2 清除：清空所有查询条件 */
 function handleClear() {
   query.reimburseNo = ''
   query.title = ''
@@ -70,10 +67,11 @@ function handleClear() {
   query.departmentId = ''
   query.reimburserId = ''
   query.businessTypeId = ''
+  filteredData.value = [...allData.value]
   currentPage.value = 1
-  loadList()
 }
 
+/** 5.1.2.2 新增：跳转报销单详情 */
 function goNew() {
   router.push('/reimburse/form')
 }
@@ -82,19 +80,21 @@ function goDetail(row: ReimburseListItem) {
   router.push(`/reimburse/form/${row.id}`)
 }
 
+/** 5.1.2.3 报销人：员工姓名+员工工号 */
 function formatClaimant(row: ReimburseListItem) {
   return `${row.reimburserName}[${row.reimburserNo}]`
 }
 
+/** 5.1.2.3 报销部门：部门名称+部门编号 */
 function formatDepartment(row: ReimburseListItem) {
   return `[${row.departmentNo}]${row.departmentName}`
 }
 
-function deptLabel(d: (typeof departments.value)[0]) {
+function deptLabel(d: (typeof REIM_DEPARTMENTS)[0]) {
   return `[${d.reimDepartmentNo}]${d.reimDepartmentName}`
 }
 
-function reimburserLabel(r: (typeof reimbursers.value)[0]) {
+function reimburserLabel(r: (typeof REIMBURSERS)[0]) {
   return `${r.reimburserName}[${r.reimburserNo}]`
 }
 
@@ -105,11 +105,11 @@ async function handleDelete(row: ReimburseListItem) {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    await deleteReimburse(row.id)
+    allData.value = allData.value.filter((r) => r.id !== row.id)
+    filterData()
     ElMessage.success('删除成功')
-    await loadList()
   } catch {
-    /* cancelled or failed */
+    /* cancelled */
   }
 }
 
@@ -117,32 +117,36 @@ function handleManualPush(row: ReimburseListItem) {
   ElMessage.success(`已推送报销单 ${row.reimburseNo}`)
 }
 
-async function handleCopy(row: ReimburseListItem) {
-  try {
-    await copyReimburse(row.id)
-    ElMessage.success('复制成功')
-    currentPage.value = 1
-    await loadList()
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '复制失败')
+function handleCopy(row: ReimburseListItem) {
+  const copy: ReimburseListItem = {
+    ...row,
+    id: genId(),
+    reimburseNo: `${row.reimburseNo}-副本`,
+    status: 0,
+    title: `${row.title}-副本`,
+    createTime: row.createTime,
   }
+  allData.value = [copy, ...allData.value]
+  filterData()
+  ElMessage.success('复制成功')
 }
 
 function handlePageChange(page: number) {
   currentPage.value = page
-  loadList()
 }
 
 function handleSizeChange(size: number) {
   pageSize.value = size
   currentPage.value = 1
-  loadList()
 }
+
+const businessTypeTree = buildBusinessTypeTree()
 </script>
 
 <template>
   <div class="list-page">
     <div class="list-card">
+      <!-- 5.1.2.1 列表查询条件 -->
       <el-form :model="query" label-width="100px" class="list-query-form">
         <el-row :gutter="16">
           <el-col :span="6">
@@ -164,7 +168,7 @@ function handleSizeChange(size: number) {
             <el-form-item label="费用归属公司">
               <el-select v-model="query.companyId" placeholder="请选择" clearable style="width: 100%">
                 <el-option
-                  v-for="c in companies"
+                  v-for="c in REIM_COMPANIES"
                   :key="c.reimCompanyId"
                   :label="c.reimCompanyName"
                   :value="c.reimCompanyId"
@@ -178,7 +182,7 @@ function handleSizeChange(size: number) {
             <el-form-item label="报销部门">
               <el-select v-model="query.departmentId" placeholder="请选择" clearable style="width: 100%">
                 <el-option
-                  v-for="d in departments"
+                  v-for="d in REIM_DEPARTMENTS"
                   :key="d.reimDepartmentId"
                   :label="deptLabel(d)"
                   :value="d.reimDepartmentId"
@@ -190,7 +194,7 @@ function handleSizeChange(size: number) {
             <el-form-item label="报销人">
               <el-select v-model="query.reimburserId" placeholder="请选择" clearable style="width: 100%">
                 <el-option
-                  v-for="r in reimbursers"
+                  v-for="r in REIMBURSERS"
                   :key="r.reimburserId"
                   :label="reimburserLabel(r)"
                   :value="r.reimburserId"
@@ -211,6 +215,7 @@ function handleSizeChange(size: number) {
             </el-form-item>
           </el-col>
           <el-col :span="6" class="query-btns-col">
+            <!-- 5.1.2.2 查询按钮 -->
             <div class="list-query-btns">
               <el-button class="btn-ghost" @click="goNew">新增</el-button>
               <el-button class="btn-ghost" @click="handleClear">清除</el-button>
@@ -220,7 +225,8 @@ function handleSizeChange(size: number) {
         </el-row>
       </el-form>
 
-      <el-table v-loading="loading" :data="tableData" border class="list-table" style="width: 100%">
+      <!-- 5.1.2.3 列表展示字段 -->
+      <el-table :data="tableData" border class="list-table" style="width: 100%">
         <el-table-column width="52" align="center" class-name="col-index">
           <template #header>
             <el-icon class="col-list-icon"><Operation /></el-icon>

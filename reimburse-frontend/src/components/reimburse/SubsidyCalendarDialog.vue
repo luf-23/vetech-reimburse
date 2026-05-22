@@ -21,6 +21,12 @@ const calendar = ref<SubsidyDayItem[]>([])
 const SUB_KEYS = ['meal', 'transport', 'comm'] as const
 type SubKey = (typeof SUB_KEYS)[number]
 
+const SUB_LABELS: Record<SubKey, string> = {
+  meal: '餐费补助',
+  transport: '交通补助',
+  comm: '通讯补助',
+}
+
 watch(
   () => props.visible,
   (v) => {
@@ -33,13 +39,13 @@ watch(
 /** 5.2.2.4-4 / 5.2.2.4-5 仅统计已勾选项 */
 const totals = computed(() => calcCalendarTotals(calendar.value))
 
-/** 5.2.2.4-3 行程天数、出发-到达城市 */
-const routeLabel = computed(() => {
-  if (!props.subsidy) return ''
+/** 5.2.2.4-3 行程中间行：城市与天数 */
+const routeParts = computed(() => {
+  if (!props.subsidy) return { middle: '', days: '' }
   const parts = props.subsidy.route.split('-')
   const from = parts[0]?.trim() ?? ''
   const to = parts[1]?.trim() ?? props.subsidy.subsidyCityName
-  return `行程天数 ${from} - ${to} ${props.subsidy.days}天`
+  return { middle: `${from} - ${to}`, days: `${props.subsidy.days}天` }
 })
 
 function countAllChecks() {
@@ -54,15 +60,17 @@ function countAllChecks() {
   return { total, checked }
 }
 
+/** 5.2.2.4-7 当前行全部选中时，出差日期复选框才为选中 */
 function isDayAllChecked(day: SubsidyDayItem): boolean {
-  return day.meal.checked && day.transport.checked && day.comm.checked
+  return SUB_KEYS.every((key) => day[key].checked)
 }
 
 function isDayIndeterminate(day: SubsidyDayItem): boolean {
-  const c = [day.meal.checked, day.transport.checked, day.comm.checked]
-  return c.some(Boolean) && !c.every(Boolean)
+  const checkedCount = SUB_KEYS.filter((key) => day[key].checked).length
+  return checkedCount > 0 && checkedCount < SUB_KEYS.length
 }
 
+/** 5.2.2.4-6 当前列全部选中时，表头复选框才为选中 */
 function isColAllChecked(key: SubKey): boolean {
   return calendar.value.length > 0 && calendar.value.every((d) => d[key].checked)
 }
@@ -72,34 +80,31 @@ function isColIndeterminate(key: SubKey): boolean {
   return n > 0 && n < calendar.value.length
 }
 
-/** 5.2.2.4-9 全选 / 取消全选所有复选框 */
-const selectAll = computed({
-  get() {
-    const { total, checked } = countAllChecks()
-    return total > 0 && checked === total
-  },
-  set(v: boolean) {
-    calendar.value.forEach((day) => {
-      for (const key of SUB_KEYS) {
-        day[key].checked = v
-      }
-    })
-  },
-})
-
-const selectAllIndeterminate = computed(() => {
+/** 5.2.2.4-9 全选：仅当日历内每一个复选框都选中时才为选中态 */
+const selectAllChecked = computed(() => {
   const { total, checked } = countAllChecks()
-  return checked > 0 && checked < total
+  return total > 0 && checked === total
 })
 
-/** 5.2.2.4-6 横向：选中整行所有补助项 */
+/** 仅选中部分列/行时，全选保持未勾选（不显示半选） */
+const selectAllIndeterminate = computed(() => false)
+
+function onSelectAllChange(checked: boolean) {
+  calendar.value.forEach((day) => {
+    for (const key of SUB_KEYS) {
+      setSubsidyChecked(day, key, checked)
+    }
+  })
+}
+
+/** 5.2.2.4-6 横向：出差日期列选中整行 */
 function toggleDay(day: SubsidyDayItem, checked: boolean) {
   for (const key of SUB_KEYS) {
     setSubsidyChecked(day, key, checked)
   }
 }
 
-/** 5.2.2.4-7 纵向：选中整列补助项 */
+/** 5.2.2.4-7 纵向：表头选中整列 */
 function toggleCol(key: SubKey, checked: boolean) {
   calendar.value.forEach((day) => {
     setSubsidyChecked(day, key, checked)
@@ -113,12 +118,13 @@ function setSubsidyChecked(day: SubsidyDayItem, key: SubKey, checked: boolean) {
   }
 }
 
-function onAmountChange(day: SubsidyDayItem, key: SubKey, val: number | undefined) {
+/** 5.2.2.4-9 未选中不可编辑；仅正数且不大于标准额 */
+function onAmountChange(day: SubsidyDayItem, key: SubKey, val: number | null | undefined) {
   if (!day[key].checked) return
   let num = val ?? 0
   if (num < 0) num = 0
   if (num > day[key].standard) num = day[key].standard
-  day[key].amount = num
+  day[key].amount = +num.toFixed(2)
 }
 
 function handleConfirm() {
@@ -144,24 +150,19 @@ function handleConfirm() {
           <span class="sidebar-type-label">出差类型</span>
           <span class="sidebar-type-value">{{ businessTypeName }}</span>
         </div>
-        <div class="sidebar-timeline">
-          <div class="timeline-track">
-            <div class="timeline-node">
-              <span class="node-dot" />
-              <div class="node-content">
-                <span class="node-label">开始日期</span>
-                <span class="node-date">{{ subsidy.startDate }}</span>
-              </div>
-            </div>
-            <div class="timeline-bar">{{ routeLabel }}</div>
-            <div class="timeline-node">
-              <span class="node-dot" />
-              <div class="node-content">
-                <span class="node-label">结束日期</span>
-                <span class="node-date">{{ subsidy.endDate }}</span>
-              </div>
-            </div>
+        <div class="trip-detail-box">
+          <div class="trip-axis-line" aria-hidden="true" />
+          <span class="trip-label trip-label-start">开始日期</span>
+          <span class="trip-dot trip-dot-top" />
+          <span class="trip-value">{{ subsidy.startDate }}</span>
+          <div class="trip-row-route">
+            <span class="trip-route-label">行程天数</span>
+            <span class="trip-route-mid">{{ routeParts.middle }}</span>
+            <span class="trip-route-days">{{ routeParts.days }}</span>
           </div>
+          <span class="trip-label trip-label-end">结束日期</span>
+          <span class="trip-dot trip-dot-bottom" />
+          <span class="trip-value trip-value-end">{{ subsidy.endDate }}</span>
         </div>
         <div class="sidebar-summary">
           <div class="summary-row">
@@ -172,10 +173,6 @@ function handleConfirm() {
             <span>标准总额</span>
             <span class="summary-value">CNY {{ formatMoney(totals.standardTotal) }}</span>
           </div>
-          <div class="summary-row">
-            <span>补助金额</span>
-            <span class="summary-value">CNY {{ formatMoney(totals.subsidyAmount) }}</span>
-          </div>
         </div>
       </div>
 
@@ -184,10 +181,12 @@ function handleConfirm() {
         <div class="calendar-main-header">
           <span class="calendar-main-title">出差补助</span>
           <el-checkbox
-            v-model="selectAll"
+            :model-value="selectAllChecked"
             :indeterminate="selectAllIndeterminate"
-            label="全选"
-          />
+            @update:model-value="onSelectAllChange"
+          >
+            全选
+          </el-checkbox>
         </div>
         <div class="calendar-table-wrap">
           <table class="calendar-table">
@@ -200,9 +199,9 @@ function handleConfirm() {
                     <el-checkbox
                       :model-value="isColAllChecked(key)"
                       :indeterminate="isColIndeterminate(key)"
-                      @change="(v: boolean) => toggleCol(key, v)"
+                      @update:model-value="(v: boolean) => toggleCol(key, v)"
                     />
-                    <span>{{ key === 'meal' ? '餐费补助' : key === 'transport' ? '交通补助' : '通讯补助' }}</span>
+                    <span>{{ SUB_LABELS[key] }}</span>
                   </div>
                 </th>
               </tr>
@@ -213,7 +212,7 @@ function handleConfirm() {
                   <el-checkbox
                     :model-value="isDayAllChecked(day)"
                     :indeterminate="isDayIndeterminate(day)"
-                    @change="(v: boolean) => toggleDay(day, v)"
+                    @update:model-value="(v: boolean) => toggleDay(day, v)"
                   />
                   <div class="date-text">
                     <div class="date-line">{{ day.date }}</div>
@@ -230,7 +229,7 @@ function handleConfirm() {
                     <div class="subsidy-input-row">
                       <el-checkbox
                         :model-value="day[key].checked"
-                        @change="(v: boolean) => setSubsidyChecked(day, key, v)"
+                        @update:model-value="(v: boolean) => setSubsidyChecked(day, key, v)"
                       />
                       <el-input-number
                         :model-value="day[key].amount"
@@ -290,85 +289,138 @@ function handleConfirm() {
 }
 
 .calendar-sidebar {
-  width: 210px;
+  width: 220px;
   flex-shrink: 0;
-  border: 1px solid #e8e8e8;
-  padding: 14px 12px;
-  background: #fff;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .sidebar-type {
-  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
   font-size: 14px;
+  line-height: 22px;
 }
 
 .sidebar-type-label {
   color: #333;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 .sidebar-type-value {
-  margin-left: 8px;
   color: #fa8c16;
+  font-size: 14px;
 }
 
-.sidebar-timeline {
-  margin-bottom: 18px;
+/* 行程明细框：三列网格，竖线与圆点同列居中 */
+.trip-detail-box {
+  display: grid;
+  grid-template-columns: 62px 24px 1fr;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  column-gap: 0;
+  row-gap: 0;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+  padding: 10px 8px;
+  margin-bottom: 16px;
 }
 
-.timeline-track {
-  position: relative;
-  padding-left: 2px;
-}
-
-.timeline-track::before {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 14px;
-  bottom: 14px;
+.trip-axis-line {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  justify-self: center;
+  align-self: stretch;
   width: 2px;
   background: #1890ff;
+  margin: 11px 0;
+  z-index: 0;
 }
 
-.timeline-node {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  position: relative;
+.trip-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.trip-label-start {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.trip-label-end {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.trip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #1890ff;
+  box-sizing: border-box;
+  justify-self: center;
+  align-self: center;
   z-index: 1;
 }
 
-.node-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #1890ff;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 1px #1890ff;
-  flex-shrink: 0;
-  margin-top: 4px;
+.trip-dot-top {
+  grid-column: 2;
+  grid-row: 1;
 }
 
-.node-label {
-  font-size: 12px;
-  color: #999;
-  display: block;
+.trip-dot-bottom {
+  grid-column: 2;
+  grid-row: 3;
 }
 
-.node-date {
+.trip-value {
+  grid-column: 3;
+  grid-row: 1;
   font-size: 14px;
   color: #333;
+  text-align: right;
+  padding-right: 2px;
 }
 
-.timeline-bar {
+.trip-value-end {
+  grid-row: 3;
+}
+
+.trip-row-route {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 4px;
   background: #1890ff;
   color: #fff;
-  padding: 8px 10px;
   font-size: 12px;
-  margin: 8px 0 8px 22px;
-  border-radius: 2px;
-  line-height: 1.5;
-  word-break: break-all;
+  padding: 8px;
+  margin: 6px 0;
+  line-height: 1.4;
+  z-index: 1;
+}
+
+.trip-route-label {
+  white-space: nowrap;
+}
+
+.trip-route-mid {
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-route-days {
+  white-space: nowrap;
+  text-align: right;
 }
 
 .sidebar-summary .summary-row {
@@ -378,6 +430,10 @@ function handleConfirm() {
   margin-bottom: 10px;
   font-size: 14px;
   color: #333;
+}
+
+.sidebar-summary .summary-row:last-child {
+  margin-bottom: 0;
 }
 
 .summary-value {

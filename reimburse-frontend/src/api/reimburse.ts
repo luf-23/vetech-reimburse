@@ -1,70 +1,22 @@
-import { request } from './http'
-import type { ListQuery, ReimburseFormData, ReimburseListItem } from '@/types/reimburse'
+import type { ReimburseFormData } from '@/types/reimburse'
 
-export interface PageResult<T> {
-  records: T[]
-  total: number
-  page: number
-  size: number
+export interface ApiValidateResponse {
+  valid: boolean
+  message: string
 }
 
-export interface ListParams extends ListQuery {
-  page?: number
-  size?: number
-}
-
-function toQuery(params: ListParams): string {
-  const q = new URLSearchParams()
-  if (params.reimburseNo) q.set('reimburseNo', params.reimburseNo)
-  if (params.title) q.set('title', params.title)
-  if (params.reason) q.set('reason', params.reason)
-  if (params.companyId) q.set('companyId', params.companyId)
-  if (params.departmentId) q.set('departmentId', params.departmentId)
-  if (params.reimburserId) q.set('reimburserId', params.reimburserId)
-  if (params.businessTypeId) q.set('businessTypeId', params.businessTypeId)
-  q.set('page', String(params.page ?? 1))
-  q.set('size', String(params.size ?? 10))
-  const s = q.toString()
-  return s ? `?${s}` : ''
-}
-
-function normalizeListItem(row: ReimburseListItem): ReimburseListItem {
-  return {
-    ...row,
-    subsidyAmount: Number(row.subsidyAmount),
-  }
-}
-
-export async function fetchReimburseList(params: ListParams) {
-  const data = await request<PageResult<ReimburseListItem>>(`/reimburse${toQuery(params)}`)
-  return {
-    ...data,
-    records: data.records.map(normalizeListItem),
-  }
-}
-
-export function fetchReimburseDetail(id: string) {
-  return request<ReimburseFormData>(`/reimburse/${id}`)
-}
-
-export function createReimburse(form: ReimburseFormData) {
-  return request<ReimburseFormData>('/reimburse', {
+/** 5.2.2.9 提交时调用后台校验 */
+export async function validateReimburseOnServer(
+  form: ReimburseFormData,
+  subsidyTotal: number,
+): Promise<ApiValidateResponse> {
+  const res = await fetch('/api/reimburse/validate', {
     method: 'POST',
-    body: JSON.stringify(form),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...form, subsidyTotal }),
   })
-}
-
-export function updateReimburse(id: string, form: ReimburseFormData) {
-  return request<ReimburseFormData>(`/reimburse/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(form),
-  })
-}
-
-export function deleteReimburse(id: string) {
-  return request<void>(`/reimburse/${id}`, { method: 'DELETE' })
-}
-
-export function copyReimburse(id: string) {
-  return request<ReimburseListItem>(`/reimburse/${id}/copy`, { method: 'POST' })
+  if (!res.ok) {
+    throw new Error(`校验接口异常(${res.status})`)
+  }
+  return res.json() as Promise<ApiValidateResponse>
 }

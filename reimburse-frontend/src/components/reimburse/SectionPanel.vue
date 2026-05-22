@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
+import { CaretBottom, CaretTop } from '@element-plus/icons-vue'
+import { computed } from 'vue'
 
-defineProps<{
-  title: string
-  collapsed?: boolean
-  showCollapse?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    collapsed?: boolean
+    showCollapse?: boolean
+  }>(),
+  {
+    collapsed: false,
+    showCollapse: true,
+  },
+)
 
 const emit = defineEmits<{
   'update:collapsed': [value: boolean]
-  toggle: []
 }>()
+
+const isCollapsed = computed(() => props.collapsed)
+
+function onToggleCollapse() {
+  emit('update:collapsed', !props.collapsed)
+}
 </script>
 
 <template>
@@ -21,18 +33,22 @@ const emit = defineEmits<{
       </div>
       <div class="reim-section-actions">
         <slot name="actions" />
-        <el-icon
-          v-if="showCollapse !== false"
-          class="reim-collapse-icon"
-          :size="14"
-          @click.stop="emit('toggle')"
+        <button
+          v-if="showCollapse"
+          type="button"
+          class="reim-collapse-btn"
+          :aria-expanded="!isCollapsed"
+          :aria-label="isCollapsed ? '展开分区' : '收起分区'"
+          @click.stop="onToggleCollapse"
         >
-          <ArrowUp v-if="!collapsed" />
-          <ArrowDown v-else />
-        </el-icon>
+          <el-icon :size="16">
+            <CaretTop v-if="!isCollapsed" />
+            <CaretBottom v-else />
+          </el-icon>
+        </button>
       </div>
     </div>
-    <div v-show="!collapsed" class="reim-section-body">
+    <div v-show="!isCollapsed" class="reim-section-body">
       <slot />
     </div>
   </div>
@@ -40,16 +56,38 @@ const emit = defineEmits<{
 
 <style scoped>
 .reim-section-header {
-  cursor: default;
+  overflow: visible;
 }
 
-.reim-collapse-icon {
-  cursor: pointer;
-  color: #999;
+.reim-section-actions {
   flex-shrink: 0;
+  overflow: visible;
 }
 
-.reim-collapse-icon:hover {
+.reim-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0 0 0 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   color: #666;
+  border-radius: 2px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.reim-collapse-btn:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.reim-collapse-btn :deep(svg) {
+  width: 16px;
+  height: 16px;
 }
 </style>

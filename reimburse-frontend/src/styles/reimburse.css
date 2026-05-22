@@ -9,6 +9,7 @@
   --reim-text-secondary: #666;
   --reim-content-width: 1200px;
   --reim-form-header-height: 76px;
+  --reim-form-footer-height: 64px;
   --reim-warning-bg: #fffbe6;
   --reim-warning-border: #ffe58f;
   --reim-total-bg: #fffbe6;
@@ -52,7 +53,6 @@ body {
 .reim-section-header {
   height: 36px;
   min-height: 36px;
-  max-height: 36px;
   background: var(--reim-section-bg);
   display: flex;
   align-items: center;
@@ -60,6 +60,7 @@ body {
   padding: 0 12px;
   user-select: none;
   box-sizing: border-box;
+  overflow: visible;
 }
 
 /* 分区标题：16px，高度 36px */
@@ -89,6 +90,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 .reim-section-action-btn {
@@ -111,7 +114,9 @@ body {
 .reim-form-page {
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
   background: #f0f2f5;
 }
 
@@ -133,20 +138,34 @@ body {
 
 .reim-form-scroll {
   flex: 1;
+  /* flex 子项需 min-height:0，否则无法在内层产生纵向滚动 */
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-top: var(--reim-form-header-height);
-  padding-bottom: 80px;
+  padding-bottom: 16px;
   display: flex;
   justify-content: center;
+  -webkit-overflow-scrolling: touch;
+  background: #f0f2f5;
+}
+
+.reim-form-scroll > .reim-form-content {
+  padding-bottom: 16px;
 }
 
 .reim-form-content {
   width: var(--reim-content-width);
   max-width: var(--reim-content-width);
   margin: 0 auto;
-  background: #fff;
+  background: transparent;
   font-size: 14px;
   box-sizing: border-box;
+}
+
+/* 单据滚动区内最后一个分区，保证底部边框完整露出 */
+.reim-form-scroll > .reim-form-content > .reim-section:last-child {
+  margin-bottom: 0;
 }
 
 /* 单据标题：20px 加粗 */
@@ -168,11 +187,10 @@ body {
   line-height: 20px;
 }
 
+/* 底栏固定在视口底部，但不遮挡滚动内容（与滚动区 flex 分列） */
 .reim-form-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
+  position: relative;
   z-index: 100;
   background: #fff;
   border-top: 1px solid var(--reim-border);

@@ -3,9 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
 import type { ItineraryItem } from '@/types/reimburse'
-import { useMasterData } from '@/composables/useMasterData'
-
-const { cities, reimbursers } = useMasterData()
+import { CITIES, REIMBURSERS } from '@/data/mockData'
 import { formatDate, getToday, isItineraryDuplicate } from '@/utils/reimburse'
 import dayjs from 'dayjs'
 
@@ -160,9 +158,9 @@ function handleSave() {
     return
   }
 
-  const traveler = reimbursers.value.find((r) => r.reimburserId === travelerId.value)!
-  const depart = cities.value.find((c) => c.cityNo === departCityNo.value)!
-  const arrive = cities.value.find((c) => c.cityNo === arriveCityNo.value)!
+  const traveler = REIMBURSERS.find((r) => r.reimburserId === travelerId.value)!
+  const depart = CITIES.find((c) => c.cityNo === departCityNo.value)!
+  const arrive = CITIES.find((c) => c.cityNo === arriveCityNo.value)!
 
   emit('save', {
     id: isEdit.value ? props.editData?.id : undefined,
@@ -207,7 +205,7 @@ function handleSave() {
       <el-form-item label="出行人" required>
         <el-select v-model="travelerId" placeholder="请选择" style="width: 100%">
           <el-option
-            v-for="r in reimbursers"
+            v-for="r in REIMBURSERS"
             :key="r.reimburserId"
             :label="r.reimburserName"
             :value="r.reimburserId"
@@ -222,7 +220,7 @@ function handleSave() {
           clearable
           style="width: 100%"
         >
-          <el-option v-for="c in cities" :key="c.cityNo" :label="c.cityName" :value="c.cityNo" />
+          <el-option v-for="c in CITIES" :key="c.cityNo" :label="c.cityName" :value="c.cityNo" />
         </el-select>
       </el-form-item>
       <el-form-item label="到达城市" required>
@@ -233,7 +231,7 @@ function handleSave() {
           clearable
           style="width: 100%"
         >
-          <el-option v-for="c in cities" :key="c.cityNo" :label="c.cityName" :value="c.cityNo" />
+          <el-option v-for="c in CITIES" :key="c.cityNo" :label="c.cityName" :value="c.cityNo" />
         </el-select>
       </el-form-item>
       <el-form-item label="出发到达日期" required>

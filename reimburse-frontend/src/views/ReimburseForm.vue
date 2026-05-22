@@ -7,15 +7,21 @@ import {
   CopyDocument,
   Delete,
   Edit,
-  InfoFilled,
+  Refresh,
   WarningFilled,
 } from '@element-plus/icons-vue'
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import ItineraryDialog from '@/components/reimburse/ItineraryDialog.vue'
 import SubsidyCalendarDialog from '@/components/reimburse/SubsidyCalendarDialog.vue'
-import type { AllocationItem, ItineraryItem, ReimburseFormData, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
-import { useMasterData } from '@/composables/useMasterData'
-import { createReimburse, fetchReimburseDetail, updateReimburse } from '@/api/reimburse'
+import type { AllocationItem, ItineraryItem, ReimburseFormData, SubsidyInfoItem } from '@/types/reimburse'
+import {
+  BUSINESS_TYPES,
+  MOCK_LIST_DATA,
+  PROJECTS,
+  REIM_COMPANIES,
+  REIM_DEPARTMENTS,
+  REIMBURSERS,
+} from '@/data/mockData'
 import {
   buildSubsidyFromItinerary,
   calcCalendarTotals,
@@ -25,11 +31,11 @@ import {
   getToday,
 } from '@/utils/reimburse'
 import { buildBusinessTypeTree } from '@/utils/businessTypeTree'
+import { validateReimburseOnServer } from '@/api/reimburse'
+import { validateReimburseForm } from '@/utils/validateReimburse'
 
 const route = useRoute()
 const router = useRouter()
-const { companies, departments, reimbursers, businessTypes, projects, ensureLoaded } = useMasterData()
-const pageLoading = ref(false)
 
 const collapsed = reactive({
   basic: false,
@@ -67,78 +73,52 @@ const form = reactive<ReimburseFormData>({
 
 const id = computed(() => route.params.id as string | undefined)
 
-function applyFormData(data: ReimburseFormData) {
-  form.id = data.id
-  form.reimburseNo = data.reimburseNo
-  form.status = data.status ?? 0
-  form.submitDate = data.submitDate ?? getToday()
-  form.title = data.title ?? ''
-  form.reason = data.reason ?? ''
-  form.reimburserId = data.reimburserId
-  form.departmentId = data.departmentId
-  form.companyId = data.companyId
-  form.businessTypeId = data.businessTypeId
-  form.remark = data.remark ?? ''
-  form.itineraries = (data.itineraries ?? []).map((it) => ({ ...it }))
-  form.subsidies = (data.subsidies ?? []).map((s) => ({
-    ...s,
-    applyAmount: Number(s.applyAmount),
-    subsidyAmount: Number(s.subsidyAmount),
-    mealTotal: Number(s.mealTotal),
-    transportTotal: Number(s.transportTotal),
-    commTotal: Number(s.commTotal),
-    calendar: (s.calendar ?? []) as SubsidyDayItem[],
-  }))
-  form.allocations =
-    data.allocations?.length
-      ? data.allocations.map((a) => ({
-          ...a,
-          ratio: Number(a.ratio),
-          amount: Number(a.amount),
-        }))
-      : [
-          {
-            id: genId(),
-            costAttributionId: '',
-            costAttributionName: '',
-            projectId: '',
-            projectName: '',
-            ratio: 1,
-            amount: 0,
-          },
-        ]
-  if (form.itineraries.length && !form.subsidies.length) {
-    form.subsidies = form.itineraries.map(buildSubsidyFromItinerary)
+function loadFormData(editId?: string) {
+  if (!editId) {
+    initSubmitDate()
+    return
   }
-  syncAllocationAmounts(expenseTotal.value.total)
-}
-
-async function loadFormData(editId?: string) {
-  pageLoading.value = true
-  try {
-    await ensureLoaded()
-    if (!editId) {
-      form.submitDate = getToday()
-      return
-    }
-    const data = await fetchReimburseDetail(editId)
-    applyFormData(data)
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '加载报销单失败')
-    form.submitDate = getToday()
-  } finally {
-    pageLoading.value = false
+  const item = MOCK_LIST_DATA.find((r) => r.id === editId)
+  if (!item) {
+    initSubmitDate()
+    return
+  }
+  form.title = item.title
+  form.reason = item.reason
+  form.reimburserId = item.reimburserId
+  form.departmentId = item.departmentId
+  form.companyId = item.companyId
+  form.businessTypeId = item.businessTypeId
+  form.reimburseNo = item.reimburseNo
+  initSubmitDate(editId)
+  if (editId === '1') {
+    form.itineraries = [
+      {
+        id: 'it-1',
+        travelerId: '13AB3A3F72409002',
+        travelerName: '徐年年',
+        travelerNo: '74541',
+        departCityNo: '10458',
+        departCityName: '武汉',
+        arriveCityNo: '10119',
+        arriveCityName: '北京',
+        startDate: '2026-04-13',
+        endDate: '2026-04-17',
+        description: '行程说明',
+      },
+    ]
+    form.subsidies = form.itineraries.map(buildSubsidyFromItinerary)
+    syncAllocationAmounts(expenseTotal.value.total)
   }
 }
 
 watch(id, (val) => loadFormData(val), { immediate: true })
 
 const businessTypeName = computed(
-  () =>
-    businessTypes.value.find((b) => b.businessTypeId === form.businessTypeId)?.businessTypeName ?? '',
+  () => BUSINESS_TYPES.find((b) => b.businessTypeId === form.businessTypeId)?.businessTypeName ?? '',
 )
 
-const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes.value))
+const businessTypeTree = buildBusinessTypeTree()
 
 const SUBSIDY_TIP =
   '1、请根据实际出差日期选择补助2、出差期间当日用餐安排的请自行核减当日餐补3、出差期间当日有用车的，请自行核减当日交补'
@@ -177,6 +157,16 @@ const itineraryDialogVisible = ref(false)
 const itineraryEditData = ref<ItineraryItem | null>(null)
 const itineraryExcludeId = ref<string | undefined>()
 const itineraryIsCopy = ref(false)
+
+/** 5.2.2.1 新增取当前日期，编辑取已保存数据 */
+function initSubmitDate(editId?: string) {
+  if (editId) {
+    const item = MOCK_LIST_DATA.find((r) => r.id === editId)
+    form.submitDate = item?.createTime?.slice(0, 10) ?? getToday()
+  } else {
+    form.submitDate = getToday()
+  }
+}
 
 function openItineraryDialog(data?: ItineraryItem, copy = false) {
   itineraryIsCopy.value = copy
@@ -236,9 +226,8 @@ function onSubsidyConfirm(calendar: SubsidyInfoItem['calendar']) {
   const idx = form.subsidies.findIndex((s) => s.id === currentSubsidy.value!.id)
   if (idx < 0) return
   const totals = calcCalendarTotals(calendar)
-  const existing = form.subsidies[idx]!
   form.subsidies[idx] = {
-    ...existing,
+    ...form.subsidies[idx],
     calendar,
     applyAmount: totals.standardTotal,
     subsidyAmount: totals.subsidyAmount,
@@ -262,18 +251,27 @@ function addAllocationRow() {
   recalcFirstAllocation()
 }
 
+const clearedRatioRows = ref(new Set<string>())
+
+function getRatioInputValue(index: number): number | undefined {
+  const row = form.allocations[index]
+  if (!row || clearedRatioRows.value.has(row.id)) return undefined
+  return +(row.ratio * 100).toFixed(2)
+}
+
 async function deleteAllocationRow(row: AllocationItem, index: number) {
   if (form.allocations.length === 1) {
     ElMessage.warning('至少保留一条分摊信息')
     return
   }
   try {
-    await ElMessageBox.confirm('确认删除?', '提示', {
+    await ElMessageBox.confirm('确定删除?', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
     })
     form.allocations.splice(index, 1)
+    clearedRatioRows.value.clear()
     recalcFirstAllocation()
   } catch {
     /* cancelled */
@@ -282,64 +280,100 @@ async function deleteAllocationRow(row: AllocationItem, index: number) {
 
 function recalcFirstAllocation() {
   const total = expenseTotal.value.total
-  const first = form.allocations[0]
-  if (!first) return
   if (form.allocations.length === 1) {
-    first.ratio = 1
-    first.amount = total
+    form.allocations[0].ratio = 1
+    form.allocations[0].amount = total
     return
   }
   const othersSum = form.allocations.slice(1).reduce((s, r) => s + r.ratio, 0)
   if (othersSum > 1) return
-  first.ratio = +(1 - othersSum).toFixed(4)
+  const firstRatio = +(1 - othersSum).toFixed(4)
+  form.allocations[0].ratio = Math.min(1, Math.max(0, firstRatio))
   syncAllocationAmounts(total)
 }
 
-function onRatioChange(index: number, val: number | null) {
+function onRatioChange(index: number, val: number | null | undefined) {
   if (index === 0) return
   const row = form.allocations[index]
   if (!row) return
-  const ratio = (val ?? 0) / 100
+  clearedRatioRows.value.delete(row.id)
+
+  if (val === null || val === undefined) {
+    row.ratio = 0
+    recalcFirstAllocation()
+    return
+  }
+
+  const ratio = val / 100
   if (ratio < 0 || ratio > 1) {
-    row.ratio = 0
+    clearedRatioRows.value.add(row.id)
     return
   }
-  const othersSum = form.allocations.slice(1).reduce((s, r, i) => s + (i + 1 === index ? ratio : r.ratio), 0)
+
+  const othersSum = form.allocations.slice(1).reduce((s, r, i) => {
+    const rowIndex = i + 1
+    return s + (rowIndex === index ? ratio : r.ratio)
+  }, 0)
+
   if (othersSum > 1) {
-    row.ratio = 0
+    clearedRatioRows.value.add(row.id)
     ElMessage.warning('分摊比例合计不能超过100%')
+    recalcFirstAllocation()
     return
   }
+
   row.ratio = ratio
   recalcFirstAllocation()
 }
 
+/** 均摊：除不尽时差值放在首行 */
 function equalSplit() {
   const n = form.allocations.length
   if (n === 0) return
+  if (n === 1) {
+    form.allocations[0].ratio = 1
+    syncAllocationAmounts(expenseTotal.value.total)
+    return
+  }
+  clearedRatioRows.value.clear()
   const base = Math.floor((10000 / n)) / 100
-  let remainder = 100 - base * n
+  const remainder = 100 - base * n
   form.allocations.forEach((row, i) => {
     row.ratio = (base + (i === 0 ? remainder : 0)) / 100
   })
-  recalcFirstAllocation()
+  syncAllocationAmounts(expenseTotal.value.total)
 }
 
-function onCostAttributionChange(row: AllocationItem, id: string) {
-  const c = companies.value.find((x) => x.reimCompanyId === id)
+function onCostAttributionChange(row: AllocationItem, id: string | undefined) {
+  if (!id) {
+    row.costAttributionId = ''
+    row.costAttributionName = ''
+    return
+  }
+  const c = REIM_COMPANIES.find((x) => x.reimCompanyId === id)
   row.costAttributionId = id
   row.costAttributionName = c?.reimCompanyName ?? ''
 }
 
-function onProjectChange(row: AllocationItem, id: string) {
-  const p = projects.value.find((x) => x.projectId === id)
+function onProjectChange(row: AllocationItem, id: string | undefined) {
+  if (!id) {
+    row.projectId = ''
+    row.projectName = ''
+    return
+  }
+  const p = PROJECTS.find((x) => x.projectId === id)
   row.projectId = id
   row.projectName = p?.projectName ?? ''
 }
 
+/** 5.2.2.7 删除备注：确认后清空 */
 async function deleteRemark() {
+  if (!form.remark.trim()) {
+    form.remark = ''
+    return
+  }
   try {
-    await ElMessageBox.confirm('确认删除备注?', '提示', {
+    await ElMessageBox.confirm('确认删除?', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
@@ -350,11 +384,13 @@ async function deleteRemark() {
   }
 }
 
+/** 5.2.2.8 关闭：确认后返回列表 */
 async function handleClose() {
   try {
     await ElMessageBox.confirm('确认关闭当前页面?', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
+      type: 'warning',
     })
     router.push('/')
   } catch {
@@ -362,61 +398,41 @@ async function handleClose() {
   }
 }
 
+const submitting = ref(false)
+
+/** 5.2.2.8 / 5.2.2.9 提交：前端 + 后台双重校验 */
 async function handleSubmit() {
-  if (!form.title.trim()) {
-    ElMessage.warning('请输入报销标题')
-    return
-  }
-  if (!form.reimburserId) {
-    ElMessage.warning('请选择报销人')
-    return
-  }
-  if (!form.departmentId) {
-    ElMessage.warning('请选择报销部门')
-    return
-  }
-  if (!form.companyId) {
-    ElMessage.warning('请选择费用归属公司')
-    return
-  }
-  if (!form.businessTypeId) {
-    ElMessage.warning('请选择业务类型')
-    return
-  }
-  if (form.itineraries.length === 0) {
-    ElMessage.warning('请补录行程')
+  if (submitting.value) return
+
+  const local = validateReimburseForm(form, expenseTotal.value.total)
+  if (!local.valid) {
+    ElMessage.warning(local.message)
     return
   }
 
-  const ratioSum = form.allocations.reduce((s, r) => s + r.ratio, 0)
-  if (Math.abs(ratioSum - 1) > 0.001) {
-    ElMessage.warning('分摊比例合计必须为100%')
-    return
-  }
-
-  const amountSum = form.allocations.reduce((s, r) => s + r.amount, 0)
-  if (Math.abs(amountSum - expenseTotal.value.total) > 0.01) {
-    ElMessage.warning('分摊金额合计必须等于补助总金额')
-    return
-  }
-
-  const payload: ReimburseFormData = {
-    ...form,
-    status: 3,
-  }
+  submitting.value = true
   try {
-    if (id.value) {
-      await updateReimburse(id.value, payload)
-    } else {
-      await createReimburse(payload)
+    const remote = await validateReimburseOnServer(form, expenseTotal.value.total)
+    if (!remote.valid) {
+      ElMessage.warning(remote.message || '提交校验未通过')
+      return
     }
+  } catch {
+    ElMessage.error('后台校验失败，请确认后端服务已启动')
+    return
+  } finally {
+    submitting.value = false
+  }
+
+  try {
     await ElMessageBox.confirm('提交成功', '提示', {
       confirmButtonText: '确定',
       showCancelButton: false,
+      type: 'success',
     })
     router.push('/')
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '提交失败')
+  } catch {
+    /* cancelled */
   }
 }
 
@@ -429,7 +445,7 @@ const allocationTotalAmount = computed(() =>
 </script>
 
 <template>
-  <div v-loading="pageLoading" class="reim-form-page">
+  <div class="reim-form-page">
     <!-- 5.2.2.1 固定表头 -->
     <div class="reim-form-header-fixed">
       <div class="reim-form-content">
@@ -441,17 +457,21 @@ const allocationTotalAmount = computed(() =>
     <div class="reim-form-scroll">
       <div class="reim-form-content">
         <!-- 5.2.2.2 基础信息 -->
-        <SectionPanel title="基础信息" :collapsed="collapsed.basic" @toggle="collapsed.basic = !collapsed.basic">
+        <SectionPanel
+          :collapsed="collapsed.basic"
+          title="基础信息"
+          @update:collapsed="collapsed.basic = $event"
+        >
           <el-form label-width="110px" label-position="right">
-            <el-form-item label="报销标题" required>
+            <el-form-item label="报销标题">
               <el-input v-model="form.title" placeholder="请输入" maxlength="500" show-word-limit />
             </el-form-item>
             <el-row :gutter="24">
               <el-col :span="8">
-                <el-form-item label="报销人" required>
+                <el-form-item label="报销人">
                   <el-select v-model="form.reimburserId" style="width: 100%">
                     <el-option
-                      v-for="r in reimbursers"
+                      v-for="r in REIMBURSERS"
                       :key="r.reimburserId"
                       :label="r.reimburserName"
                       :value="r.reimburserId"
@@ -460,10 +480,10 @@ const allocationTotalAmount = computed(() =>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="报销部门" required>
+                <el-form-item label="报销部门">
                   <el-select v-model="form.departmentId" style="width: 100%">
                     <el-option
-                      v-for="d in departments"
+                      v-for="d in REIM_DEPARTMENTS"
                       :key="d.reimDepartmentId"
                       :label="d.reimDepartmentName"
                       :value="d.reimDepartmentId"
@@ -475,7 +495,7 @@ const allocationTotalAmount = computed(() =>
                 <el-form-item label="费用归属公司" required>
                   <el-select v-model="form.companyId" style="width: 100%">
                     <el-option
-                      v-for="c in companies"
+                      v-for="c in REIM_COMPANIES"
                       :key="c.reimCompanyId"
                       :label="c.reimCompanyName"
                       :value="c.reimCompanyId"
@@ -484,17 +504,20 @@ const allocationTotalAmount = computed(() =>
                 </el-form-item>
               </el-col>
             </el-row>
-            <el-form-item label="业务类型" required>
-              <el-tree-select
-                v-model="form.businessTypeId"
-                :data="businessTypeTree"
-                check-strictly
-                :render-after-expand="false"
-                placeholder="请选择"
-                style="width: calc(100% - 28px)"
-              />
-              <el-icon style="margin-left: 8px; color: #999; vertical-align: middle"><InfoFilled /></el-icon>
-            </el-form-item>
+            <el-row :gutter="24">
+              <el-col :span="8">
+                <el-form-item label="业务类型" required>
+                  <el-tree-select
+                    v-model="form.businessTypeId"
+                    :data="businessTypeTree"
+                    check-strictly
+                    :render-after-expand="false"
+                    placeholder="请选择"
+                    class="business-type-select"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
             <el-form-item label="出差事由">
               <el-input
                 v-model="form.reason"
@@ -511,7 +534,7 @@ const allocationTotalAmount = computed(() =>
         <!-- 补录行程 -->
         <SectionPanel
           :collapsed="collapsed.itinerary"
-          @toggle="collapsed.itinerary = !collapsed.itinerary"
+          @update:collapsed="collapsed.itinerary = $event"
         >
           <template #title>补录行程</template>
           <template #actions>
@@ -546,7 +569,7 @@ const allocationTotalAmount = computed(() =>
         <!-- 5.2.2.4 补助信息 -->
         <SectionPanel
           :collapsed="collapsed.subsidy"
-          @toggle="collapsed.subsidy = !collapsed.subsidy"
+          @update:collapsed="collapsed.subsidy = $event"
         >
           <template #title>
             <span class="section-title-main">补助信息</span>
@@ -561,7 +584,7 @@ const allocationTotalAmount = computed(() =>
               <span class="subsidy-tip-text">{{ SUBSIDY_TIP }}</span>
             </div>
           </el-tooltip>
-          <el-table :data="form.subsidies" class="subsidy-info-table" style="width: 100%">
+          <el-table :data="form.subsidies" border class="subsidy-info-table" style="width: 100%">
             <el-table-column type="index" label="序号" width="60" align="center" />
             <el-table-column prop="travelerName" label="出行人" width="100" />
             <el-table-column label="出差日期" min-width="200">
@@ -585,7 +608,11 @@ const allocationTotalAmount = computed(() =>
         </SectionPanel>
 
         <!-- 费用合计 -->
-        <SectionPanel title="费用合计" :collapsed="collapsed.total" @toggle="collapsed.total = !collapsed.total">
+        <SectionPanel
+          :collapsed="collapsed.total"
+          title="费用合计"
+          @update:collapsed="collapsed.total = $event"
+        >
           <el-row class="expense-total-row">
             <el-col :span="6">
               <span class="total-label">补助总金额：</span>
@@ -609,29 +636,26 @@ const allocationTotalAmount = computed(() =>
         <!-- 费用归属及分摊 -->
         <SectionPanel
           :collapsed="collapsed.allocation"
-          @toggle="collapsed.allocation = !collapsed.allocation"
+          @update:collapsed="collapsed.allocation = $event"
         >
           <template #title>
             <span class="section-title-main">费用归属及分摊</span>
             <span class="reim-subsidy-header-extra">(分摊金额: {{ formatMoney(expenseTotal.total) }})</span>
           </template>
-          <template #actions>
-            <span class="reim-section-action-btn" @click.stop="equalSplit">均摊</span>
-          </template>
-          <el-table :data="form.allocations" border style="width: 100%">
+          <el-table :data="form.allocations" border class="allocation-table" style="width: 100%">
             <el-table-column type="index" label="序号" width="60" />
             <el-table-column label="费用归属" min-width="180">
-              <template #header><span style="color: #f56c6c">*</span> 费用归属</template>
-              <template #default="{ row, $index }">
+              <template #header><span class="allocation-required">*</span> 费用归属</template>
+              <template #default="{ row }">
                 <el-select
                   :model-value="row.costAttributionId"
                   placeholder="请选择"
-                  :disabled="$index === 0 && form.allocations.length > 1"
+                  clearable
                   style="width: 100%"
                   @update:model-value="onCostAttributionChange(row, $event)"
                 >
                   <el-option
-                    v-for="c in companies"
+                    v-for="c in REIM_COMPANIES"
                     :key="c.reimCompanyId"
                     :label="c.reimCompanyName"
                     :value="c.reimCompanyId"
@@ -644,11 +668,12 @@ const allocationTotalAmount = computed(() =>
                 <el-select
                   :model-value="row.projectId"
                   placeholder="请选择"
+                  clearable
                   style="width: 100%"
                   @update:model-value="onProjectChange(row, $event)"
                 >
                   <el-option
-                    v-for="p in projects"
+                    v-for="p in PROJECTS"
                     :key="p.projectId"
                     :label="p.projectName"
                     :value="p.projectId"
@@ -656,25 +681,49 @@ const allocationTotalAmount = computed(() =>
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="分摊比例" width="140" align="right">
-              <template #header><span style="color: #f56c6c">*</span> 分摊比例</template>
+            <el-table-column width="140" align="right" header-align="right">
+              <template #header>
+                <div class="allocation-ratio-header">
+                  <el-button
+                    type="primary"
+                    link
+                    class="allocation-equal-btn"
+                    @click.stop="equalSplit"
+                  >
+                    均摊
+                  </el-button>
+                  <div class="allocation-ratio-header-row">
+                    <span><span class="allocation-required">*</span> 分摊比例</span>
+                    <el-icon class="allocation-refresh-icon" title="均摊" @click.stop="equalSplit">
+                      <Refresh />
+                    </el-icon>
+                  </div>
+                </div>
+              </template>
               <template #default="{ row, $index }">
+                <div v-if="$index === 0" class="allocation-readonly">{{ formatPercent(row.ratio) }}</div>
                 <el-input-number
-                  v-if="$index > 0"
-                  :model-value="row.ratio * 100"
+                  v-else
+                  :model-value="getRatioInputValue($index)"
                   :min="0"
                   :max="100"
                   :precision="2"
+                  :controls="true"
                   controls-position="right"
-                  style="width: 100%"
+                  class="allocation-ratio-input"
                   @update:model-value="onRatioChange($index, $event)"
                 />
-                <span v-else>{{ formatPercent(row.ratio) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="分摊金额" width="120" align="right">
-              <template #header><span style="color: #f56c6c">*</span> 分摊金额</template>
-              <template #default="{ row }">{{ formatMoney(row.amount) }}</template>
+            <el-table-column label="分摊金额" width="120" align="right" header-align="right">
+              <template #header><span class="allocation-required">*</span> 分摊金额</template>
+              <template #default="{ row, $index }">
+                <div
+                  :class="$index === 0 ? 'allocation-readonly' : 'allocation-amount-cell'"
+                >
+                  {{ formatMoney(row.amount) }}
+                </div>
+              </template>
             </el-table-column>
             <el-table-column label="操作" width="80">
               <template #default="{ row, $index }">
@@ -698,7 +747,7 @@ const allocationTotalAmount = computed(() =>
         <!-- 备注信息 -->
         <SectionPanel
           :collapsed="collapsed.remark"
-          @toggle="collapsed.remark = !collapsed.remark"
+          @update:collapsed="collapsed.remark = $event"
         >
           <template #title>备注信息</template>
           <template #actions>
@@ -721,7 +770,7 @@ const allocationTotalAmount = computed(() =>
     <div class="reim-form-footer">
       <div class="reim-form-footer-inner">
         <el-button @click="handleClose">关闭</el-button>
-        <el-button type="primary" @click="handleSubmit">提交</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">提交</el-button>
       </div>
     </div>
 
@@ -749,6 +798,10 @@ const allocationTotalAmount = computed(() =>
   font-weight: 500;
 }
 
+.business-type-select {
+  width: 100%;
+}
+
 .expense-total-row {
   padding: 8px 0;
   font-size: 14px;
@@ -762,6 +815,72 @@ const allocationTotalAmount = computed(() =>
 .expense-total-row span:not(.total-label) {
   font-size: 14px;
 }
+.allocation-required {
+  color: #f56c6c;
+}
+
+.allocation-table :deep(.el-table__header th) {
+  background: #fafafa !important;
+  vertical-align: middle;
+}
+
+.allocation-ratio-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.allocation-equal-btn {
+  font-size: 14px;
+  padding: 0;
+  height: auto;
+}
+
+.allocation-ratio-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 100%;
+}
+
+.allocation-refresh-icon {
+  color: #1890ff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.allocation-refresh-icon:hover {
+  opacity: 0.75;
+}
+
+.allocation-readonly {
+  text-align: right;
+  padding: 0 11px;
+  height: 32px;
+  line-height: 32px;
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.allocation-amount-cell {
+  text-align: right;
+  padding-right: 4px;
+}
+
+.allocation-ratio-input {
+  width: 100%;
+}
+
+.allocation-ratio-input :deep(.el-input__inner) {
+  text-align: right;
+}
+
 .allocation-table-extra {
   border: 1px solid #e8e8e8;
   border-top: none;

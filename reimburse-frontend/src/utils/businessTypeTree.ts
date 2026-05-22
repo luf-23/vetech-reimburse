@@ -1,4 +1,5 @@
 import type { BusinessType } from '@/types/reimburse'
+import { BUSINESS_TYPES } from '@/data/mockData'
 
 export interface TreeNode {
   value: string
@@ -7,7 +8,7 @@ export interface TreeNode {
   disabled?: boolean
 }
 
-export function buildBusinessTypeTree(types: BusinessType[]): TreeNode[] {
+export function buildBusinessTypeTree(types: BusinessType[] = BUSINESS_TYPES): TreeNode[] {
   const roots = types.filter((t) => t.superiorId === 'none')
   function buildChildren(parentId: string): TreeNode[] {
     return types

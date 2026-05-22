@@ -1,11 +1,6 @@
 import dayjs from 'dayjs'
-import type { City, ItineraryItem, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
-
-let citiesCache: City[] = []
-
-export function setCitiesCache(cities: City[]) {
-  citiesCache = cities
-}
+import type { ItineraryItem, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
+import { CITIES } from '@/data/mockData'
 
 const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
@@ -53,11 +48,11 @@ export function getDateRange(start: string, end: string): string[] {
 }
 
 export function getWeekday(date: string): string {
-  return WEEKDAYS[dayjs(date).day()] ?? ''
+  return WEEKDAYS[dayjs(date).day()]
 }
 
 export function getCityType(cityNo: string): string {
-  return citiesCache.find((c) => c.cityNo === cityNo)?.cityType ?? '3'
+  return CITIES.find((c) => c.cityNo === cityNo)?.cityType ?? '3'
 }
 
 export function createSubsidyCalendar(
@@ -163,5 +158,5 @@ export function formatMoney(n: number): string {
 }
 
 export function formatPercent(ratio: number): string {
-  return `${(ratio * 100).toFixed(2)}%`
+  return `${(ratio * 100).toFixed(2)} %`
 }
