@@ -6,6 +6,8 @@ import org.dep.reimburse.vo.Result;
 import org.dep.reimburse.vo.ReimburseFormVO;
 import org.dep.reimburse.vo.ReimburseListItemVO;
 import org.dep.reimburse.vo.ReimburseListQuery;
+import org.dep.reimburse.vo.ReimburseValidateRequest;
+import org.dep.reimburse.vo.ValidateResultVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,5 +49,10 @@ public class ReimburseController {
     @PostMapping("/{id}/copy")
     public Result<ReimburseListItemVO> copy(@PathVariable Long id) {
         return Result.success(reimburseService.copy(id));
+    }
+
+    @PostMapping("/validate")
+    public Result<ValidateResultVO> validate(@RequestBody ReimburseValidateRequest request) {
+        return Result.success(reimburseService.validate(request));
     }
 }

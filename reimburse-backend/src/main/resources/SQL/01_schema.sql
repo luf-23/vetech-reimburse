@@ -103,7 +103,9 @@ CREATE TABLE IF NOT EXISTS reimburse_subsidy (
     comm_total       DECIMAL(12, 2) NOT NULL DEFAULT 0,
     calendar_json    JSON          NULL,
     KEY idx_subsidy_doc (doc_id),
-    CONSTRAINT fk_subsidy_doc FOREIGN KEY (doc_id) REFERENCES reimburse_doc (id) ON DELETE CASCADE
+    KEY idx_subsidy_itinerary (itinerary_id),
+    CONSTRAINT fk_subsidy_doc FOREIGN KEY (doc_id) REFERENCES reimburse_doc (id) ON DELETE CASCADE,
+    CONSTRAINT fk_subsidy_itinerary FOREIGN KEY (itinerary_id) REFERENCES reimburse_itinerary (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 费用分摊

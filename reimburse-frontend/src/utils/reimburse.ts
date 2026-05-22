@@ -107,6 +107,22 @@ export function calcCalendarTotals(calendar: SubsidyDayItem[]) {
   return { subsidyAmount, standardTotal, mealTotal, transportTotal, commTotal }
 }
 
+/** 补助仅随补录行程存在：剔除孤儿补助，并为缺失行程生成默认补助行 */
+export function syncSubsidiesWithItineraries(
+  itineraries: ItineraryItem[],
+  subsidies: SubsidyInfoItem[],
+): SubsidyInfoItem[] {
+  if (!itineraries.length) return []
+  const itineraryIds = new Set(itineraries.map((it) => it.id))
+  const byItineraryId = new Map<string, SubsidyInfoItem>()
+  for (const sub of subsidies) {
+    if (sub.itineraryId && itineraryIds.has(sub.itineraryId)) {
+      byItineraryId.set(sub.itineraryId, sub)
+    }
+  }
+  return itineraries.map((it) => byItineraryId.get(it.id) ?? buildSubsidyFromItinerary(it))
+}
+
 export function buildSubsidyFromItinerary(it: ItineraryItem): SubsidyInfoItem {
   const days = getDaysBetween(it.startDate, it.endDate)
   const calendar = createSubsidyCalendar(it.startDate, it.endDate, it.arriveCityNo, it.arriveCityName)

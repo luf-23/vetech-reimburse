@@ -4,6 +4,8 @@ import org.dep.reimburse.vo.PageResult;
 import org.dep.reimburse.vo.ReimburseFormVO;
 import org.dep.reimburse.vo.ReimburseListItemVO;
 import org.dep.reimburse.vo.ReimburseListQuery;
+import org.dep.reimburse.vo.ReimburseValidateRequest;
+import org.dep.reimburse.vo.ValidateResultVO;
 
 public interface ReimburseService {
 
@@ -16,4 +18,6 @@ public interface ReimburseService {
     void delete(Long id);
 
     ReimburseListItemVO copy(Long id);
+
+    ValidateResultVO validate(ReimburseValidateRequest request);
 }

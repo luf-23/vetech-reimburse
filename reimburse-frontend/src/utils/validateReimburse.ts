@@ -66,6 +66,38 @@ export function validateItineraryList(itineraries: ItineraryItem[]): ValidateRes
   return ok()
 }
 
+/** 补助信息必须与补录行程一一对应 */
+export function validateItinerarySubsidyLink(
+  itineraries: ItineraryItem[],
+  subsidies: SubsidyInfoItem[],
+): ValidateResult {
+  if (!itineraries.length) {
+    if (subsidies.length) return fail('没有补录行程时不能填写补助信息')
+    return ok()
+  }
+  if (!subsidies.length) return ok()
+
+  const itineraryIds = new Set(itineraries.map((it) => it.id))
+  if (subsidies.length !== itineraryIds.size) {
+    return fail('补助信息须与补录行程一一对应')
+  }
+
+  const linked = new Set<string>()
+  for (const sub of subsidies) {
+    if (!sub.itineraryId || !itineraryIds.has(sub.itineraryId)) {
+      return fail('存在未关联补录行程的补助信息')
+    }
+    if (linked.has(sub.itineraryId)) {
+      return fail('每条补录行程只能对应一条补助信息')
+    }
+    linked.add(sub.itineraryId)
+  }
+  if (linked.size !== itineraryIds.size) {
+    return fail('每条补录行程均须维护补助信息')
+  }
+  return ok()
+}
+
 /** 5.2.2.2 基础信息：全部必填 */
 export function validateBasicInfo(
   form: ReimburseFormData,
@@ -95,10 +127,16 @@ export function validateReimburseForm(
 
   if (form.remark && form.remark.length > 1000) return fail('备注信息不可超过1000字')
 
-  if (!form.itineraries.length) return fail('请补录行程')
+  if (!form.itineraries.length) {
+    if (form.subsidies.length) return fail('没有补录行程时不能填写补助信息')
+    return fail('请补录行程')
+  }
 
   const itineraryResult = validateItineraryList(form.itineraries)
   if (!itineraryResult.valid) return itineraryResult
+
+  const linkResult = validateItinerarySubsidyLink(form.itineraries, form.subsidies)
+  if (!linkResult.valid) return linkResult
 
   if (!form.subsidies.length) return fail('请完善补助信息')
 

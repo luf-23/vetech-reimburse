@@ -22,6 +22,7 @@ import {
   formatPercent,
   genId,
   getToday,
+  syncSubsidiesWithItineraries,
 } from '@/utils/reimburse'
 import { buildBusinessTypeTree, isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 import {
@@ -85,7 +86,10 @@ function applyFormData(data: ReimburseFormData) {
   form.reimburseNo = data.reimburseNo
   form.id = data.id
   form.itineraries = data.itineraries ? [...data.itineraries] : []
-  form.subsidies = data.subsidies ? JSON.parse(JSON.stringify(data.subsidies)) : []
+  form.subsidies = syncSubsidiesWithItineraries(
+    form.itineraries,
+    data.subsidies ? JSON.parse(JSON.stringify(data.subsidies)) : [],
+  )
   form.allocations = data.allocations?.length
     ? JSON.parse(JSON.stringify(data.allocations))
     : [
@@ -122,6 +126,14 @@ async function loadFormData(editId?: string) {
 watch(id, (val) => {
   void loadFormData(val)
 }, { immediate: true })
+
+watch(
+  () => form.itineraries.map((it) => it.id).join('\n'),
+  () => {
+    form.subsidies = syncSubsidiesWithItineraries(form.itineraries, form.subsidies)
+    recalcFirstAllocation()
+  },
+)
 
 const businessTypeName = computed(
   () =>
@@ -603,8 +615,9 @@ const allocationTotalAmount = computed(() =>
           </el-table>
         </SectionPanel>
 
-        <!-- 5.2.2.4 补助信息 -->
+        <!-- 5.2.2.4 补助信息（随补录行程生成，无行程不展示） -->
         <SectionPanel
+          v-if="form.itineraries.length"
           :collapsed="collapsed.subsidy"
           @update:collapsed="collapsed.subsidy = $event"
         >

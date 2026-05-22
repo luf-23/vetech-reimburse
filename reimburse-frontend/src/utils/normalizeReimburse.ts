@@ -1,4 +1,5 @@
 import type { DocStatus, ReimburseFormData, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
+import { syncSubsidiesWithItineraries } from '@/utils/reimburse'
 
 function toNum(v: unknown, fallback = 0): number {
   if (v == null || v === '') return fallback
@@ -55,11 +56,16 @@ function normalizeSubsidy(sub: SubsidyInfoItem): SubsidyInfoItem {
 
 /** 将后端返回的报销单详情规范为前端表单结构 */
 export function normalizeReimburseForm(data: ReimburseFormData): ReimburseFormData {
+  const itineraries = data.itineraries ?? []
+  const subsidies = syncSubsidiesWithItineraries(
+    itineraries,
+    (data.subsidies ?? []).map((s) => normalizeSubsidy(s as SubsidyInfoItem)),
+  )
   return {
     ...data,
     status: toNum(data.status, 0) as DocStatus,
-    itineraries: data.itineraries ?? [],
-    subsidies: (data.subsidies ?? []).map((s) => normalizeSubsidy(s as SubsidyInfoItem)),
+    itineraries,
+    subsidies,
     allocations: (data.allocations ?? []).map((a) => ({
       ...a,
       ratio: toNum(a.ratio),

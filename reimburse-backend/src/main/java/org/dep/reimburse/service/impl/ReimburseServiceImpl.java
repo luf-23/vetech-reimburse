@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dep.reimburse.entity.*;
 import org.dep.reimburse.mapper.*;
+import org.dep.reimburse.service.ReimburseFormValidator;
 import org.dep.reimburse.service.ReimburseService;
 import org.dep.reimburse.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,6 +101,11 @@ public class ReimburseServiceImpl implements ReimburseService {
             doc.setCreateTime(LocalDate.now());
         }
 
+        ValidateResultVO validation = ReimburseFormValidator.validate(form, null);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
+        }
+
         applyHeader(doc, form);
         if (doc.getId() == null) {
             docMapper.insert(doc);
@@ -140,12 +146,17 @@ public class ReimburseServiceImpl implements ReimburseService {
         copy.setSubsidies(source.getSubsidies());
         copy.setAllocations(source.getAllocations());
         copy.setRemark(source.getRemark());
-        for (ItineraryItemVO it : copy.getItineraries()) {
-            it.setId(null);
+        List<ItineraryItemVO> copyItineraries = copy.getItineraries();
+        List<SubsidyInfoItemVO> copySubsidies = copy.getSubsidies();
+        for (int i = 0; i < copyItineraries.size(); i++) {
+            String tempId = "copy-it-" + i;
+            copyItineraries.get(i).setId(tempId);
         }
-        for (SubsidyInfoItemVO sub : copy.getSubsidies()) {
-            sub.setId(null);
-            sub.setItineraryId(null);
+        for (int i = 0; i < copySubsidies.size(); i++) {
+            copySubsidies.get(i).setId(null);
+            if (i < copyItineraries.size()) {
+                copySubsidies.get(i).setItineraryId(copyItineraries.get(i).getId());
+            }
         }
         for (AllocationItemVO alloc : copy.getAllocations()) {
             alloc.setId(null);
@@ -153,6 +164,12 @@ public class ReimburseServiceImpl implements ReimburseService {
         ReimburseFormVO saved = save(copy);
         ReimburseDoc doc = docMapper.selectById(Long.parseLong(saved.getId()));
         return toListItem(doc, indexCompanies(), indexDepartments(), indexReimbursers(), indexBusinessTypes());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ValidateResultVO validate(ReimburseValidateRequest request) {
+        return ReimburseFormValidator.validate(request, request.getSubsidyTotal());
     }
 
     private LambdaQueryWrapper<ReimburseDoc> buildQueryWrapper(ReimburseListQuery query) {
@@ -304,12 +321,21 @@ public class ReimburseServiceImpl implements ReimburseService {
             vo.getItineraries().add(item);
         }
 
+        Set<String> itineraryIds = vo.getItineraries().stream()
+                .map(ItineraryItemVO::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
         for (ReimburseSubsidy sub : listSubsidies(doc.getId())) {
+            if (sub.getItineraryId() == null) {
+                continue;
+            }
+            String linkedItineraryId = String.valueOf(sub.getItineraryId());
+            if (!itineraryIds.contains(linkedItineraryId)) {
+                continue;
+            }
             SubsidyInfoItemVO item = new SubsidyInfoItemVO();
             item.setId(String.valueOf(sub.getId()));
-            if (sub.getItineraryId() != null) {
-                item.setItineraryId(String.valueOf(sub.getItineraryId()));
-            }
+            item.setItineraryId(linkedItineraryId);
             item.setTravelerId(sub.getTravelerId());
             Reimburser traveler = reimburserMap.get(sub.getTravelerId());
             if (traveler != null) {
@@ -395,19 +421,23 @@ public class ReimburseServiceImpl implements ReimburseService {
         }
 
         for (SubsidyInfoItemVO sub : form.getSubsidies()) {
+            if (!StringUtils.hasText(sub.getItineraryId())) {
+                throw new IllegalArgumentException("补助信息必须关联补录行程");
+            }
+            Long mapped = itineraryIdMap.get(sub.getItineraryId());
+            if (mapped == null) {
+                try {
+                    mapped = Long.parseLong(sub.getItineraryId());
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("存在未关联补录行程的补助信息");
+                }
+                if (!itineraryIdMap.containsValue(mapped)) {
+                    throw new IllegalArgumentException("存在未关联补录行程的补助信息");
+                }
+            }
             ReimburseSubsidy entity = new ReimburseSubsidy();
             entity.setDocId(docId);
-            if (StringUtils.hasText(sub.getItineraryId())) {
-                Long mapped = itineraryIdMap.get(sub.getItineraryId());
-                if (mapped == null) {
-                    try {
-                        mapped = Long.parseLong(sub.getItineraryId());
-                    } catch (NumberFormatException ignored) {
-                        /* optional link */
-                    }
-                }
-                entity.setItineraryId(mapped);
-            }
+            entity.setItineraryId(mapped);
             entity.setTravelerId(sub.getTravelerId());
             entity.setStartDate(LocalDate.parse(sub.getStartDate(), DATE_FMT));
             entity.setEndDate(LocalDate.parse(sub.getEndDate(), DATE_FMT));
