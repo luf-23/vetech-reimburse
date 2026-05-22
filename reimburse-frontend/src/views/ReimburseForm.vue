@@ -14,14 +14,7 @@ import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import ItineraryDialog from '@/components/reimburse/ItineraryDialog.vue'
 import SubsidyCalendarDialog from '@/components/reimburse/SubsidyCalendarDialog.vue'
 import type { AllocationItem, ItineraryItem, ReimburseFormData, SubsidyInfoItem } from '@/types/reimburse'
-import {
-  BUSINESS_TYPES,
-  MOCK_LIST_DATA,
-  PROJECTS,
-  REIM_COMPANIES,
-  REIM_DEPARTMENTS,
-  REIMBURSERS,
-} from '@/data/mockData'
+import { useMasterData } from '@/composables/useMasterData'
 import {
   buildSubsidyFromItinerary,
   calcCalendarTotals,
@@ -31,11 +24,18 @@ import {
   getToday,
 } from '@/utils/reimburse'
 import { buildBusinessTypeTree, isBusinessTypeLeaf } from '@/utils/businessTypeTree'
-import { validateReimburseOnServer } from '@/api/reimburse'
+import {
+  createReimburse,
+  fetchReimburseDetail,
+  updateReimburse,
+  validateReimburseOnServer,
+} from '@/api/reimburse'
 import { validateReimburseForm } from '@/utils/validateReimburse'
 
 const route = useRoute()
 const router = useRouter()
+const { companies, departments, reimbursers, businessTypes, projects, ensureLoaded } =
+  useMasterData()
 
 const collapsed = reactive({
   basic: false,
@@ -51,10 +51,10 @@ const form = reactive<ReimburseFormData>({
   submitDate: getToday(),
   title: '',
   reason: '',
-  reimburserId: '13AB3A3F72409002',
-  departmentId: '14515BB4BFB92003',
-  companyId: '1C61686865DA8000',
-  businessTypeId: '1B5FEB7DD4396000',
+  reimburserId: '',
+  departmentId: '',
+  companyId: '',
+  businessTypeId: '',
   itineraries: [],
   subsidies: [],
   allocations: [
@@ -73,52 +73,63 @@ const form = reactive<ReimburseFormData>({
 
 const id = computed(() => route.params.id as string | undefined)
 
-function loadFormData(editId?: string) {
+function applyFormData(data: ReimburseFormData) {
+  form.status = data.status ?? 0
+  form.submitDate = data.submitDate ?? getToday()
+  form.title = data.title ?? ''
+  form.reason = data.reason ?? ''
+  form.reimburserId = data.reimburserId ?? ''
+  form.departmentId = data.departmentId ?? ''
+  form.companyId = data.companyId ?? ''
+  form.businessTypeId = data.businessTypeId ?? ''
+  form.reimburseNo = data.reimburseNo
+  form.id = data.id
+  form.itineraries = data.itineraries ? [...data.itineraries] : []
+  form.subsidies = data.subsidies ? JSON.parse(JSON.stringify(data.subsidies)) : []
+  form.allocations = data.allocations?.length
+    ? JSON.parse(JSON.stringify(data.allocations))
+    : [
+        {
+          id: genId(),
+          costAttributionId: '',
+          costAttributionName: '',
+          projectId: '',
+          projectName: '',
+          ratio: 1,
+          amount: 0,
+        },
+      ]
+  form.remark = data.remark ?? ''
+  lastBusinessTypeId.value = form.businessTypeId
+  syncAllocationAmounts(expenseTotal.value.total)
+}
+
+async function loadFormData(editId?: string) {
+  await ensureLoaded()
   if (!editId) {
     initSubmitDate()
     return
   }
-  const item = MOCK_LIST_DATA.find((r) => r.id === editId)
-  if (!item) {
-    initSubmitDate()
-    return
-  }
-  form.title = item.title
-  form.reason = item.reason
-  form.reimburserId = item.reimburserId
-  form.departmentId = item.departmentId
-  form.companyId = item.companyId
-  form.businessTypeId = item.businessTypeId
-  form.reimburseNo = item.reimburseNo
-  initSubmitDate(editId)
-  if (editId === '1') {
-    form.itineraries = [
-      {
-        id: 'it-1',
-        travelerId: '13AB3A3F72409002',
-        travelerName: '徐年年',
-        travelerNo: '74541',
-        departCityNo: '10458',
-        departCityName: '武汉',
-        arriveCityNo: '10119',
-        arriveCityName: '北京',
-        startDate: '2026-04-13',
-        endDate: '2026-04-17',
-        description: '行程说明',
-      },
-    ]
-    form.subsidies = form.itineraries.map(buildSubsidyFromItinerary)
-    syncAllocationAmounts(expenseTotal.value.total)
+  try {
+    const data = await fetchReimburseDetail(editId)
+    applyFormData(data)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '加载单据详情失败')
+    router.push('/')
   }
 }
 
-watch(id, (val) => loadFormData(val), { immediate: true })
+watch(id, (val) => {
+  void loadFormData(val)
+}, { immediate: true })
 
 const businessTypeName = computed(
-  () => BUSINESS_TYPES.find((b) => b.businessTypeId === form.businessTypeId)?.businessTypeName ?? '',
+  () =>
+    businessTypes.value.find((b) => b.businessTypeId === form.businessTypeId)?.businessTypeName ??
+    '',
 )
 
-const businessTypeTree = buildBusinessTypeTree()
+const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes.value))
 
 const lastBusinessTypeId = ref(form.businessTypeId)
 
@@ -126,7 +137,7 @@ watch(
   () => form.businessTypeId,
   (id) => {
     if (!id) return
-    if (!isBusinessTypeLeaf(id)) {
+    if (!isBusinessTypeLeaf(id, businessTypes.value)) {
       form.businessTypeId = lastBusinessTypeId.value
       ElMessage.warning('请选择末级业务类型')
       return
@@ -174,13 +185,8 @@ const itineraryExcludeId = ref<string | undefined>()
 const itineraryIsCopy = ref(false)
 
 /** 5.2.2.1 新增取当前日期，编辑取已保存数据 */
-function initSubmitDate(editId?: string) {
-  if (editId) {
-    const item = MOCK_LIST_DATA.find((r) => r.id === editId)
-    form.submitDate = item?.createTime?.slice(0, 10) ?? getToday()
-  } else {
-    form.submitDate = getToday()
-  }
+function initSubmitDate() {
+  form.submitDate = getToday()
 }
 
 function openItineraryDialog(data?: ItineraryItem, copy = false) {
@@ -241,8 +247,9 @@ function onSubsidyConfirm(calendar: SubsidyInfoItem['calendar']) {
   const idx = form.subsidies.findIndex((s) => s.id === currentSubsidy.value!.id)
   if (idx < 0) return
   const totals = calcCalendarTotals(calendar)
+  const row = form.subsidies[idx]!
   form.subsidies[idx] = {
-    ...form.subsidies[idx],
+    ...row,
     calendar,
     applyAmount: totals.standardTotal,
     subsidyAmount: totals.subsidyAmount,
@@ -295,15 +302,17 @@ async function deleteAllocationRow(row: AllocationItem, index: number) {
 
 function recalcFirstAllocation() {
   const total = expenseTotal.value.total
+  const first = form.allocations[0]
+  if (!first) return
   if (form.allocations.length === 1) {
-    form.allocations[0].ratio = 1
-    form.allocations[0].amount = total
+    first.ratio = 1
+    first.amount = total
     return
   }
   const othersSum = form.allocations.slice(1).reduce((s, r) => s + r.ratio, 0)
   if (othersSum > 1) return
   const firstRatio = +(1 - othersSum).toFixed(4)
-  form.allocations[0].ratio = Math.min(1, Math.max(0, firstRatio))
+  first.ratio = Math.min(1, Math.max(0, firstRatio))
   syncAllocationAmounts(total)
 }
 
@@ -346,7 +355,8 @@ function equalSplit() {
   const n = form.allocations.length
   if (n === 0) return
   if (n === 1) {
-    form.allocations[0].ratio = 1
+    const only = form.allocations[0]
+    if (only) only.ratio = 1
     syncAllocationAmounts(expenseTotal.value.total)
     return
   }
@@ -365,7 +375,7 @@ function onCostAttributionChange(row: AllocationItem, id: string | undefined) {
     row.costAttributionName = ''
     return
   }
-  const c = REIM_COMPANIES.find((x) => x.reimCompanyId === id)
+  const c = companies.value.find((x) => x.reimCompanyId === id)
   row.costAttributionId = id
   row.costAttributionName = c?.reimCompanyName ?? ''
 }
@@ -376,7 +386,7 @@ function onProjectChange(row: AllocationItem, id: string | undefined) {
     row.projectName = ''
     return
   }
-  const p = PROJECTS.find((x) => x.projectId === id)
+  const p = projects.value.find((x) => x.projectId === id)
   row.projectId = id
   row.projectName = p?.projectName ?? ''
 }
@@ -419,7 +429,7 @@ const submitting = ref(false)
 async function handleSubmit() {
   if (submitting.value) return
 
-  const local = validateReimburseForm(form, expenseTotal.value.total)
+  const local = validateReimburseForm(form, expenseTotal.value.total, businessTypes.value)
   if (!local.valid) {
     ElMessage.warning(local.message)
     return
@@ -427,19 +437,27 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    const remote = await validateReimburseOnServer(form, expenseTotal.value.total)
-    if (!remote.valid) {
-      ElMessage.warning(remote.message || '提交校验未通过')
+    try {
+      const remote = await validateReimburseOnServer(form, expenseTotal.value.total)
+      if (!remote.valid) {
+        ElMessage.warning(remote.message || '提交校验未通过')
+        return
+      }
+    } catch {
+      /* 后台校验不可用：已通过前端校验则继续 */
+    }
+
+    try {
+      if (id.value) {
+        await updateReimburse(id.value, form)
+      } else {
+        await createReimburse(form)
+      }
+    } catch (e) {
+      ElMessage.error(e instanceof Error ? e.message : '保存失败，请确认后端已启动')
       return
     }
-  } catch {
-    ElMessage.error('后台校验失败，请确认后端服务已启动')
-    return
-  } finally {
-    submitting.value = false
-  }
 
-  try {
     await ElMessageBox.confirm('提交成功', '提示', {
       confirmButtonText: '确定',
       showCancelButton: false,
@@ -448,6 +466,8 @@ async function handleSubmit() {
     router.push('/')
   } catch {
     /* cancelled */
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -478,15 +498,15 @@ const allocationTotalAmount = computed(() =>
           @update:collapsed="collapsed.basic = $event"
         >
           <el-form label-width="110px" label-position="right">
-            <el-form-item label="报销标题">
+            <el-form-item label="报销标题" required>
               <el-input v-model="form.title" placeholder="请输入" maxlength="500" show-word-limit />
             </el-form-item>
             <el-row :gutter="24">
               <el-col :span="8">
-                <el-form-item label="报销人">
-                  <el-select v-model="form.reimburserId" style="width: 100%">
+                <el-form-item label="报销人" required>
+                  <el-select v-model="form.reimburserId" placeholder="请选择" style="width: 100%">
                     <el-option
-                      v-for="r in REIMBURSERS"
+                      v-for="r in reimbursers"
                       :key="r.reimburserId"
                       :label="r.reimburserName"
                       :value="r.reimburserId"
@@ -495,10 +515,10 @@ const allocationTotalAmount = computed(() =>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="报销部门">
-                  <el-select v-model="form.departmentId" style="width: 100%">
+                <el-form-item label="报销部门" required>
+                  <el-select v-model="form.departmentId" placeholder="请选择" style="width: 100%">
                     <el-option
-                      v-for="d in REIM_DEPARTMENTS"
+                      v-for="d in departments"
                       :key="d.reimDepartmentId"
                       :label="d.reimDepartmentName"
                       :value="d.reimDepartmentId"
@@ -508,9 +528,9 @@ const allocationTotalAmount = computed(() =>
               </el-col>
               <el-col :span="8">
                 <el-form-item label="费用归属公司" required>
-                  <el-select v-model="form.companyId" style="width: 100%">
+                  <el-select v-model="form.companyId" placeholder="请选择" style="width: 100%">
                     <el-option
-                      v-for="c in REIM_COMPANIES"
+                      v-for="c in companies"
                       :key="c.reimCompanyId"
                       :label="c.reimCompanyName"
                       :value="c.reimCompanyId"
@@ -535,7 +555,7 @@ const allocationTotalAmount = computed(() =>
                 </el-form-item>
               </el-col>
             </el-row>
-            <el-form-item label="出差事由">
+            <el-form-item label="出差事由" required>
               <el-input
                 v-model="form.reason"
                 type="textarea"
@@ -672,7 +692,7 @@ const allocationTotalAmount = computed(() =>
                   @update:model-value="onCostAttributionChange(row, $event)"
                 >
                   <el-option
-                    v-for="c in REIM_COMPANIES"
+                    v-for="c in companies"
                     :key="c.reimCompanyId"
                     :label="c.reimCompanyName"
                     :value="c.reimCompanyId"
@@ -690,7 +710,7 @@ const allocationTotalAmount = computed(() =>
                   @update:model-value="onProjectChange(row, $event)"
                 >
                   <el-option
-                    v-for="p in PROJECTS"
+                    v-for="p in projects"
                     :key="p.projectId"
                     :label="p.projectName"
                     :value="p.projectId"

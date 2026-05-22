@@ -1,4 +1,6 @@
-import type { AllocationItem, ItineraryItem, ReimburseFormData, SubsidyInfoItem } from '@/types/reimburse'
+import type { BusinessType, ItineraryItem, ReimburseFormData, SubsidyInfoItem } from '@/types/reimburse'
+import { MASTER_DATA } from '@/data/masterData'
+import { isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 import { datesOverlap, isItineraryDuplicate } from '@/utils/reimburse'
 
 export interface ValidateResult {
@@ -64,14 +66,33 @@ export function validateItineraryList(itineraries: ItineraryItem[]): ValidateRes
   return ok()
 }
 
+/** 5.2.2.2 基础信息：全部必填 */
+export function validateBasicInfo(
+  form: ReimburseFormData,
+  businessTypes: BusinessType[] = MASTER_DATA.businessTypes,
+): ValidateResult {
+  if (!form.title?.trim()) return fail('请输入报销标题')
+  if (!form.reimburserId) return fail('请选择报销人')
+  if (!form.departmentId) return fail('请选择报销部门')
+  if (!form.companyId) return fail('请选择费用归属公司')
+  if (!form.businessTypeId) return fail('请选择业务类型')
+  if (!isBusinessTypeLeaf(form.businessTypeId, businessTypes)) {
+    return fail('请选择末级业务类型')
+  }
+  if (!form.reason?.trim()) return fail('请输入出差事由')
+  if (form.title.length > 500) return fail('报销标题不可超过500字')
+  if (form.reason.length > 500) return fail('出差事由不可超过500字')
+  return ok()
+}
+
 export function validateReimburseForm(
   form: ReimburseFormData,
   subsidyTotal: number,
+  businessTypes: BusinessType[] = MASTER_DATA.businessTypes,
 ): ValidateResult {
-  if (!form.companyId) return fail('请选择费用归属公司')
-  if (!form.businessTypeId) return fail('请选择业务类型')
-  if (form.title && form.title.length > 500) return fail('报销标题不可超过500字')
-  if (form.reason && form.reason.length > 500) return fail('出差事由不可超过500字')
+  const basicResult = validateBasicInfo(form, businessTypes)
+  if (!basicResult.valid) return basicResult
+
   if (form.remark && form.remark.length > 1000) return fail('备注信息不可超过1000字')
 
   if (!form.itineraries.length) return fail('请补录行程')

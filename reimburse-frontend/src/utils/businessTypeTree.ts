@@ -1,5 +1,4 @@
 import type { BusinessType } from '@/types/reimburse'
-import { BUSINESS_TYPES } from '@/data/mockData'
 
 export interface TreeNode {
   value: string
@@ -8,15 +7,12 @@ export interface TreeNode {
 }
 
 /** 仅末级（thereSubordinateNode === '0'）可选 */
-export function isBusinessTypeLeaf(
-  typeId: string,
-  types: BusinessType[] = BUSINESS_TYPES,
-): boolean {
+export function isBusinessTypeLeaf(typeId: string, types: BusinessType[]): boolean {
   const t = types.find((x) => x.businessTypeId === typeId)
   return t?.thereSubordinateNode === '0'
 }
 
-export function buildBusinessTypeTree(types: BusinessType[] = BUSINESS_TYPES): TreeNode[] {
+export function buildBusinessTypeTree(types: BusinessType[]): TreeNode[] {
   const roots = types.filter((t) => t.superiorId === 'none')
   function buildChildren(parentId: string): TreeNode[] {
     return types
