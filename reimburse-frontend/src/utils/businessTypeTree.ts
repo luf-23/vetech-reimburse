@@ -5,7 +5,15 @@ export interface TreeNode {
   value: string
   label: string
   children?: TreeNode[]
-  disabled?: boolean
+}
+
+/** 仅末级（thereSubordinateNode === '0'）可选 */
+export function isBusinessTypeLeaf(
+  typeId: string,
+  types: BusinessType[] = BUSINESS_TYPES,
+): boolean {
+  const t = types.find((x) => x.businessTypeId === typeId)
+  return t?.thereSubordinateNode === '0'
 }
 
 export function buildBusinessTypeTree(types: BusinessType[] = BUSINESS_TYPES): TreeNode[] {
@@ -16,14 +24,12 @@ export function buildBusinessTypeTree(types: BusinessType[] = BUSINESS_TYPES): T
       .map((t) => ({
         value: t.businessTypeId,
         label: t.businessTypeName,
-        disabled: t.thereSubordinateNode === '1',
         children: t.thereSubordinateNode === '1' ? buildChildren(t.businessTypeId) : undefined,
       }))
   }
   return roots.map((r) => ({
     value: r.businessTypeId,
     label: r.businessTypeName,
-    disabled: r.thereSubordinateNode === '1',
     children: buildChildren(r.businessTypeId),
   }))
 }

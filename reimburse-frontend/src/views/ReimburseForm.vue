@@ -30,7 +30,7 @@ import {
   genId,
   getToday,
 } from '@/utils/reimburse'
-import { buildBusinessTypeTree } from '@/utils/businessTypeTree'
+import { buildBusinessTypeTree, isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 import { validateReimburseOnServer } from '@/api/reimburse'
 import { validateReimburseForm } from '@/utils/validateReimburse'
 
@@ -119,6 +119,21 @@ const businessTypeName = computed(
 )
 
 const businessTypeTree = buildBusinessTypeTree()
+
+const lastBusinessTypeId = ref(form.businessTypeId)
+
+watch(
+  () => form.businessTypeId,
+  (id) => {
+    if (!id) return
+    if (!isBusinessTypeLeaf(id)) {
+      form.businessTypeId = lastBusinessTypeId.value
+      ElMessage.warning('请选择末级业务类型')
+      return
+    }
+    lastBusinessTypeId.value = id
+  },
+)
 
 const SUBSIDY_TIP =
   '1、请根据实际出差日期选择补助2、出差期间当日用餐安排的请自行核减当日餐补3、出差期间当日有用车的，请自行核减当日交补'
@@ -511,6 +526,8 @@ const allocationTotalAmount = computed(() =>
                     v-model="form.businessTypeId"
                     :data="businessTypeTree"
                     check-strictly
+                    default-expand-all
+                    expand-on-click-node
                     :render-after-expand="false"
                     placeholder="请选择"
                     class="business-type-select"

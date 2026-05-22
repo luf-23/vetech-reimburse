@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Edit, MoreFilled, Operation } from '@element-plus/icons-vue'
@@ -12,7 +12,7 @@ import {
   REIMBURSERS,
 } from '@/data/mockData'
 import { formatMoney, genId } from '@/utils/reimburse'
-import { buildBusinessTypeTree } from '@/utils/businessTypeTree'
+import { buildBusinessTypeTree, isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 
 const router = useRouter()
 
@@ -141,6 +141,24 @@ function handleSizeChange(size: number) {
 }
 
 const businessTypeTree = buildBusinessTypeTree()
+
+const lastQueryBusinessTypeId = ref('')
+
+watch(
+  () => query.businessTypeId,
+  (id) => {
+    if (!id) {
+      lastQueryBusinessTypeId.value = ''
+      return
+    }
+    if (!isBusinessTypeLeaf(id)) {
+      query.businessTypeId = lastQueryBusinessTypeId.value
+      ElMessage.warning('请选择末级业务类型')
+    } else {
+      lastQueryBusinessTypeId.value = id
+    }
+  },
+)
 </script>
 
 <template>
@@ -208,6 +226,8 @@ const businessTypeTree = buildBusinessTypeTree()
                 v-model="query.businessTypeId"
                 :data="businessTypeTree"
                 check-strictly
+                default-expand-all
+                expand-on-click-node
                 clearable
                 placeholder="请选择"
                 style="width: 100%"
