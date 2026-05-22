@@ -4,7 +4,7 @@
 
 | 目录 | 技术栈 |
 |------|--------|
-| `reimburse-backend` | Spring Boot 3.2.12、Spring Data JPA、MySQL |
+| `reimburse-backend` | Spring Boot 3.2.12、MyBatis-Plus、MySQL |
 | `reimburse-frontend` | Vite、Vue 3、Element Plus |
 
 ### 环境要求
@@ -48,15 +48,17 @@ Get-Content reimburse-backend\src\main\resources\SQL\02_data.sql | mysql -u root
 
 #### 2. 配置数据源
 
-编辑 `reimburse-backend/src/main/resources/application.properties`，使账号密码与本地 MySQL 一致：
+编辑 `reimburse-backend/src/main/resources/application.yml`，使账号密码与本地 MySQL 一致：
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/vetech_reimburse?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-spring.datasource.username=root
-spring.datasource.password=你的密码
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/vetech_reimburse?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 你的密码
 ```
 
-仓库默认密码为 `rootpassword`（用户名 `root`）。`spring.jpa.hibernate.ddl-auto=none`，表结构以 SQL 脚本为准，启动时不会自动改表。
+仓库默认密码为 `rootpassword`（用户名 `root`）。表结构以 SQL 脚本为准，启动时不会自动改表。
 
 ---
 
@@ -93,11 +95,11 @@ mvn spring-boot:run
 
 用 IntelliJ IDEA / Eclipse 打开 `reimburse-backend`，运行主类：
 
-`org.dep.reimbursebackend.ReimburseBackendApplication`
+`org.dep.reimburse.ReimburseApplication`
 
 #### 验证是否启动成功
 
-- 控制台出现 `Started ReimburseBackendApplication`，且无数据源连接错误。
+- 控制台出现 `Started ReimburseApplication`，且无数据源连接错误。
 - 浏览器或 curl 访问主数据接口应返回 JSON：
 
 ```bash
@@ -108,9 +110,9 @@ curl http://localhost:8080/api/master
 
 | 现象 | 处理 |
 |------|------|
-| `Communications link failure` / 无法连接数据库 | 确认 MySQL 已启动；库名、端口、用户名密码与 `application.properties` 一致 |
+| `Communications link failure` / 无法连接数据库 | 确认 MySQL 已启动；库名、端口、用户名密码与 `application.yml` 一致 |
 | `Table 'vetech_reimburse.xxx' doesn't exist` | 未执行或未完成 `01_schema.sql`，请重新执行建表脚本 |
-| 端口 8080 被占用 | 修改 `application.properties` 中的 `server.port`，并同步修改前端 `vite.config.ts` 里 proxy 的 `target` 端口 |
+| 端口 8080 被占用 | 修改 `application.yml` 中的 `server.port`，并同步修改前端 `vite.config.ts` 里 proxy 的 `target` 端口 |
 
 ---
 
@@ -124,7 +126,7 @@ npm install
 npm run dev
 ```
 
-开发服务器默认地址一般为 `http://localhost:5173`（以终端输出为准）。`vite.config.ts` 已将 `/api` 代理到 `http://localhost:8080`，前端请求 `/api/...` 会转发到后端，无需单独配置 CORS。
+开发服务器默认地址一般为 `http://localhost:5173`（以终端输出为准）。`vite.config.ts` 已将 `/api` 代理到 `http://localhost:8080`，前端请求 `/api/...` 会由开发服务器转发到后端。
 
 生产构建：
 
@@ -139,7 +141,7 @@ npm run preview   # 本地预览构建结果
 ### 四、推荐启动顺序
 
 1. 执行 `01_schema.sql`、`02_data.sql`
-2. 修改 `application.properties` 数据源
+2. 修改 `application.yml` 数据源
 3. 启动 **reimburse-backend**（8080）
 4. 启动 **reimburse-frontend**（`npm run dev`）
 5. 浏览器打开前端地址，进入报销列表 / 表单页
