@@ -1,6 +1,6 @@
-package org.dep.reimburse.controller;
+package org.dep.reimburse.handler;
 
-import org.dep.reimburse.vo.Result;
+import org.dep.reimburse.common.Result;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;

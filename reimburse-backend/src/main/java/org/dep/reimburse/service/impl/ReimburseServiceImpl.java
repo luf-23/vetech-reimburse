@@ -8,6 +8,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.dep.reimburse.entity.*;
 import org.dep.reimburse.mapper.*;
+import org.dep.reimburse.common.PageResult;
+import org.dep.reimburse.converter.ReimburseConverter;
+import org.dep.reimburse.dto.*;
 import org.dep.reimburse.service.ReimburseFormValidator;
 import org.dep.reimburse.service.ReimburseService;
 import org.dep.reimburse.vo.*;
@@ -35,23 +38,13 @@ public class ReimburseServiceImpl implements ReimburseService {
     @Autowired
     private ReimburseAllocationMapper allocationMapper;
     @Autowired
-    private ReimCompanyMapper companyMapper;
-    @Autowired
-    private ReimDepartmentMapper departmentMapper;
-    @Autowired
-    private ReimburserMapper reimburserMapper;
-    @Autowired
-    private BusinessTypeMapper businessTypeMapper;
-    @Autowired
-    private CityMapper cityMapper;
-    @Autowired
-    private ProjectMapper projectMapper;
-    @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private ReimburseConverter reimburseConverter;
 
     @Override
     @Transactional(readOnly = true)
-    public PageResult<ReimburseListItemVO> list(ReimburseListQuery query) {
+    public PageResult<ReimburseListItemVO> list(ReimburseListQueryDTO query) {
         int pageNum = Math.max(query.getPage(), 1);
         int size = query.getSize() <= 0 ? 10 : query.getSize();
 
@@ -60,13 +53,8 @@ public class ReimburseServiceImpl implements ReimburseService {
 
         Page<ReimburseDoc> pageData = docMapper.selectPage(new Page<>(pageNum, size), wrapper);
 
-        Map<String, ReimCompany> companyMap = indexCompanies();
-        Map<String, ReimDepartment> deptMap = indexDepartments();
-        Map<String, Reimburser> reimburserMap = indexReimbursers();
-        Map<String, BusinessType> businessTypeMap = indexBusinessTypes();
-
         List<ReimburseListItemVO> records = pageData.getRecords().stream()
-                .map(doc -> toListItem(doc, companyMap, deptMap, reimburserMap, businessTypeMap))
+                .map(this::toListItem)
                 .toList();
 
         return new PageResult<>(records, pageData.getTotal(), pageNum, size);
@@ -84,7 +72,7 @@ public class ReimburseServiceImpl implements ReimburseService {
 
     @Override
     @Transactional
-    public ReimburseFormVO save(ReimburseFormVO form) {
+    public ReimburseFormVO save(ReimburseFormDTO form) {
         ReimburseDoc doc;
         if (StringUtils.hasText(form.getId())) {
             Long id = Long.parseLong(form.getId());
@@ -133,7 +121,7 @@ public class ReimburseServiceImpl implements ReimburseService {
     @Transactional
     public ReimburseListItemVO copy(Long id) {
         ReimburseFormVO source = getById(id);
-        ReimburseFormVO copy = new ReimburseFormVO();
+        ReimburseFormDTO copy = reimburseConverter.toDTO(source);
         copy.setStatus(0);
         copy.setTitle(source.getTitle() + "-副本");
         copy.setReason(source.getReason());
@@ -142,12 +130,8 @@ public class ReimburseServiceImpl implements ReimburseService {
         copy.setCompanyId(source.getCompanyId());
         copy.setBusinessTypeId(source.getBusinessTypeId());
         copy.setSubmitDate(LocalDate.now().format(DATE_FMT));
-        copy.setItineraries(source.getItineraries());
-        copy.setSubsidies(source.getSubsidies());
-        copy.setAllocations(source.getAllocations());
-        copy.setRemark(source.getRemark());
-        List<ItineraryItemVO> copyItineraries = copy.getItineraries();
-        List<SubsidyInfoItemVO> copySubsidies = copy.getSubsidies();
+        List<ItineraryItemDTO> copyItineraries = copy.getItineraries();
+        List<SubsidyInfoItemDTO> copySubsidies = copy.getSubsidies();
         for (int i = 0; i < copyItineraries.size(); i++) {
             String tempId = "copy-it-" + i;
             copyItineraries.get(i).setId(tempId);
@@ -158,21 +142,21 @@ public class ReimburseServiceImpl implements ReimburseService {
                 copySubsidies.get(i).setItineraryId(copyItineraries.get(i).getId());
             }
         }
-        for (AllocationItemVO alloc : copy.getAllocations()) {
+        for (AllocationItemDTO alloc : copy.getAllocations()) {
             alloc.setId(null);
         }
         ReimburseFormVO saved = save(copy);
         ReimburseDoc doc = docMapper.selectById(Long.parseLong(saved.getId()));
-        return toListItem(doc, indexCompanies(), indexDepartments(), indexReimbursers(), indexBusinessTypes());
+        return toListItem(doc);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ValidateResultVO validate(ReimburseValidateRequest request) {
+    public ValidateResultVO validate(ReimburseValidateRequestDTO request) {
         return ReimburseFormValidator.validate(request, request.getSubsidyTotal());
     }
 
-    private LambdaQueryWrapper<ReimburseDoc> buildQueryWrapper(ReimburseListQuery query) {
+    private LambdaQueryWrapper<ReimburseDoc> buildQueryWrapper(ReimburseListQueryDTO query) {
         LambdaQueryWrapper<ReimburseDoc> wrapper = Wrappers.lambdaQuery();
         if (StringUtils.hasText(query.getReimburseNo())) {
             wrapper.like(ReimburseDoc::getReimburseNo, query.getReimburseNo().trim());
@@ -229,13 +213,7 @@ public class ReimburseServiceImpl implements ReimburseService {
         );
     }
 
-    private ReimburseListItemVO toListItem(
-            ReimburseDoc doc,
-            Map<String, ReimCompany> companyMap,
-            Map<String, ReimDepartment> deptMap,
-            Map<String, Reimburser> reimburserMap,
-            Map<String, BusinessType> businessTypeMap
-    ) {
+    private ReimburseListItemVO toListItem(ReimburseDoc doc) {
         ReimburseListItemVO vo = new ReimburseListItemVO();
         vo.setId(String.valueOf(doc.getId()));
         vo.setReimburseNo(doc.getReimburseNo());
@@ -248,25 +226,6 @@ public class ReimburseServiceImpl implements ReimburseService {
         vo.setTitle(doc.getTitle());
         vo.setReason(doc.getReason());
         vo.setSubsidyAmount(doc.getSubsidyAmount());
-
-        Reimburser r = reimburserMap.get(doc.getReimburserId());
-        if (r != null) {
-            vo.setReimburserName(r.getReimburserName());
-            vo.setReimburserNo(r.getReimburserNo());
-        }
-        ReimDepartment d = deptMap.get(doc.getDepartmentId());
-        if (d != null) {
-            vo.setDepartmentName(d.getReimDepartmentName());
-            vo.setDepartmentNo(d.getReimDepartmentNo());
-        }
-        ReimCompany c = companyMap.get(doc.getCompanyId());
-        if (c != null) {
-            vo.setCompanyName(c.getReimCompanyName());
-        }
-        BusinessType b = businessTypeMap.get(doc.getBusinessTypeId());
-        if (b != null) {
-            vo.setBusinessTypeName(b.getBusinessTypeName());
-        }
         if (doc.getCreateTime() != null) {
             vo.setCreateTime(doc.getCreateTime().format(DATE_FMT));
         }
@@ -274,11 +233,6 @@ public class ReimburseServiceImpl implements ReimburseService {
     }
 
     private ReimburseFormVO toFormVO(ReimburseDoc doc) {
-        Map<String, Reimburser> reimburserMap = indexReimbursers();
-        Map<String, City> cityMap = indexCities();
-        Map<String, ReimCompany> companyMap = indexCompanies();
-        Map<String, Project> projectMap = indexProjects();
-
         ReimburseFormVO vo = new ReimburseFormVO();
         vo.setId(String.valueOf(doc.getId()));
         vo.setReimburseNo(doc.getReimburseNo());
@@ -300,21 +254,8 @@ public class ReimburseServiceImpl implements ReimburseService {
             ItineraryItemVO item = new ItineraryItemVO();
             item.setId(String.valueOf(it.getId()));
             item.setTravelerId(it.getTravelerId());
-            Reimburser traveler = reimburserMap.get(it.getTravelerId());
-            if (traveler != null) {
-                item.setTravelerName(traveler.getReimburserName());
-                item.setTravelerNo(traveler.getReimburserNo());
-            }
             item.setDepartCityNo(it.getDepartCityNo());
             item.setArriveCityNo(it.getArriveCityNo());
-            City depart = cityMap.get(it.getDepartCityNo());
-            City arrive = cityMap.get(it.getArriveCityNo());
-            if (depart != null) {
-                item.setDepartCityName(depart.getCityName());
-            }
-            if (arrive != null) {
-                item.setArriveCityName(arrive.getCityName());
-            }
             item.setStartDate(it.getStartDate().format(DATE_FMT));
             item.setEndDate(it.getEndDate().format(DATE_FMT));
             item.setDescription(it.getDescription());
@@ -337,19 +278,11 @@ public class ReimburseServiceImpl implements ReimburseService {
             item.setId(String.valueOf(sub.getId()));
             item.setItineraryId(linkedItineraryId);
             item.setTravelerId(sub.getTravelerId());
-            Reimburser traveler = reimburserMap.get(sub.getTravelerId());
-            if (traveler != null) {
-                item.setTravelerName(traveler.getReimburserName());
-            }
             item.setStartDate(sub.getStartDate().format(DATE_FMT));
             item.setEndDate(sub.getEndDate().format(DATE_FMT));
             item.setDays(sub.getDays());
             item.setRoute(sub.getRoute());
             item.setSubsidyCityNo(sub.getSubsidyCityNo());
-            City city = cityMap.get(sub.getSubsidyCityNo());
-            if (city != null) {
-                item.setSubsidyCityName(city.getCityName());
-            }
             item.setApplyAmount(sub.getApplyAmount());
             item.setSubsidyAmount(sub.getSubsidyAmount());
             item.setMealTotal(sub.getMealTotal());
@@ -369,15 +302,7 @@ public class ReimburseServiceImpl implements ReimburseService {
             AllocationItemVO item = new AllocationItemVO();
             item.setId(String.valueOf(alloc.getId()));
             item.setCostAttributionId(alloc.getCostAttributionId());
-            ReimCompany company = companyMap.get(alloc.getCostAttributionId());
-            if (company != null) {
-                item.setCostAttributionName(company.getReimCompanyName());
-            }
             item.setProjectId(alloc.getProjectId());
-            Project project = projectMap.get(alloc.getProjectId());
-            if (project != null) {
-                item.setProjectName(project.getProjectName());
-            }
             item.setRatio(alloc.getRatio());
             item.setAmount(alloc.getAmount());
             vo.getAllocations().add(item);
@@ -386,7 +311,7 @@ public class ReimburseServiceImpl implements ReimburseService {
         return vo;
     }
 
-    private void applyHeader(ReimburseDoc doc, ReimburseFormVO form) {
+    private void applyHeader(ReimburseDoc doc, ReimburseFormDTO form) {
         doc.setTitle(form.getTitle());
         doc.setReason(form.getReason() != null ? form.getReason() : "");
         doc.setReimburserId(form.getReimburserId());
@@ -402,10 +327,10 @@ public class ReimburseServiceImpl implements ReimburseService {
         }
     }
 
-    private void saveChildren(Long docId, ReimburseFormVO form) {
+    private void saveChildren(Long docId, ReimburseFormDTO form) {
         Map<String, Long> itineraryIdMap = new HashMap<>();
         int idx = 0;
-        for (ItineraryItemVO it : form.getItineraries()) {
+        for (ItineraryItemDTO it : form.getItineraries()) {
             ReimburseItinerary entity = new ReimburseItinerary();
             entity.setDocId(docId);
             entity.setTravelerId(it.getTravelerId());
@@ -420,7 +345,7 @@ public class ReimburseServiceImpl implements ReimburseService {
             idx++;
         }
 
-        for (SubsidyInfoItemVO sub : form.getSubsidies()) {
+        for (SubsidyInfoItemDTO sub : form.getSubsidies()) {
             if (!StringUtils.hasText(sub.getItineraryId())) {
                 throw new IllegalArgumentException("补助信息必须关联补录行程");
             }
@@ -460,7 +385,7 @@ public class ReimburseServiceImpl implements ReimburseService {
         }
 
         int sort = 0;
-        for (AllocationItemVO alloc : form.getAllocations()) {
+        for (AllocationItemDTO alloc : form.getAllocations()) {
             ReimburseAllocation entity = new ReimburseAllocation();
             entity.setDocId(docId);
             entity.setCostAttributionId(alloc.getCostAttributionId());
@@ -487,39 +412,4 @@ public class ReimburseServiceImpl implements ReimburseService {
                 + String.format("%04d", System.currentTimeMillis() % 10000);
     }
 
-    private Map<String, ReimCompany> indexCompanies() {
-        Map<String, ReimCompany> map = new HashMap<>();
-        companyMapper.selectList(null).forEach(c -> map.put(c.getReimCompanyId(), c));
-        return map;
-    }
-
-    private Map<String, ReimDepartment> indexDepartments() {
-        Map<String, ReimDepartment> map = new HashMap<>();
-        departmentMapper.selectList(null).forEach(d -> map.put(d.getReimDepartmentId(), d));
-        return map;
-    }
-
-    private Map<String, Reimburser> indexReimbursers() {
-        Map<String, Reimburser> map = new HashMap<>();
-        reimburserMapper.selectList(null).forEach(r -> map.put(r.getReimburserId(), r));
-        return map;
-    }
-
-    private Map<String, BusinessType> indexBusinessTypes() {
-        Map<String, BusinessType> map = new HashMap<>();
-        businessTypeMapper.selectList(null).forEach(b -> map.put(b.getBusinessTypeId(), b));
-        return map;
-    }
-
-    private Map<String, City> indexCities() {
-        Map<String, City> map = new HashMap<>();
-        cityMapper.selectList(null).forEach(c -> map.put(c.getCityNo(), c));
-        return map;
-    }
-
-    private Map<String, Project> indexProjects() {
-        Map<String, Project> map = new HashMap<>();
-        projectMapper.selectList(null).forEach(p -> map.put(p.getProjectId(), p));
-        return map;
-    }
 }

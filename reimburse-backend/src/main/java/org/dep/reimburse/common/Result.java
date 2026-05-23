@@ -1,4 +1,4 @@
-package org.dep.reimburse.vo;
+package org.dep.reimburse.common;
 
 import lombok.Data;
 

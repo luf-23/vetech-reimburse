@@ -1,9 +1,9 @@
-package org.dep.reimburse.vo;
+package org.dep.reimburse.dto;
 
 import lombok.Data;
 
 @Data
-public class ReimburseListQuery {
+public class ReimburseListQueryDTO {
     private String reimburseNo = "";
     private String title = "";
     private String reason = "";

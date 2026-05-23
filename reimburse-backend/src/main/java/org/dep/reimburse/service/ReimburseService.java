@@ -1,23 +1,24 @@
 package org.dep.reimburse.service;
 
-import org.dep.reimburse.vo.PageResult;
+import org.dep.reimburse.common.PageResult;
+import org.dep.reimburse.dto.ReimburseFormDTO;
+import org.dep.reimburse.dto.ReimburseListQueryDTO;
+import org.dep.reimburse.dto.ReimburseValidateRequestDTO;
 import org.dep.reimburse.vo.ReimburseFormVO;
 import org.dep.reimburse.vo.ReimburseListItemVO;
-import org.dep.reimburse.vo.ReimburseListQuery;
-import org.dep.reimburse.vo.ReimburseValidateRequest;
 import org.dep.reimburse.vo.ValidateResultVO;
 
 public interface ReimburseService {
 
-    PageResult<ReimburseListItemVO> list(ReimburseListQuery query);
+    PageResult<ReimburseListItemVO> list(ReimburseListQueryDTO query);
 
     ReimburseFormVO getById(Long id);
 
-    ReimburseFormVO save(ReimburseFormVO form);
+    ReimburseFormVO save(ReimburseFormDTO form);
 
     void delete(Long id);
 
     ReimburseListItemVO copy(Long id);
 
-    ValidateResultVO validate(ReimburseValidateRequest request);
+    ValidateResultVO validate(ReimburseValidateRequestDTO request);
 }
