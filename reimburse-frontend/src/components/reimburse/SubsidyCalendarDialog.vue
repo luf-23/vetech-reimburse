@@ -190,6 +190,13 @@ function handleConfirm() {
         </div>
         <div class="calendar-table-wrap">
           <table class="calendar-table">
+            <colgroup>
+              <col class="col-date" />
+              <col class="col-city" />
+              <col class="col-subsidy" />
+              <col class="col-subsidy" />
+              <col class="col-subsidy" />
+            </colgroup>
             <thead>
               <tr>
                 <th class="col-date">出差日期</th>
@@ -209,18 +216,24 @@ function handleConfirm() {
             <tbody>
               <tr v-for="day in calendar" :key="day.date">
                 <td class="date-cell">
-                  <el-checkbox
-                    :model-value="isDayAllChecked(day)"
-                    :indeterminate="isDayIndeterminate(day)"
-                    @update:model-value="(v: boolean) => toggleDay(day, v)"
-                  />
-                  <div class="date-text">
-                    <div class="date-line">{{ day.date }}</div>
-                    <div class="weekday">{{ day.weekday }}</div>
+                  <div class="date-cell-inner">
+                    <el-checkbox
+                      :model-value="isDayAllChecked(day)"
+                      :indeterminate="isDayIndeterminate(day)"
+                      @update:model-value="(v: boolean) => toggleDay(day, v)"
+                    />
+                    <div class="date-text">
+                      <div class="date-line">{{ day.date }}</div>
+                      <div class="weekday">{{ day.weekday }}</div>
+                    </div>
                   </div>
-                  <el-icon class="loc-icon"><Location /></el-icon>
                 </td>
-                <td class="city-cell">{{ day.cityName }}</td>
+                <td class="city-cell">
+                  <div class="city-cell-inner">
+                    <el-icon class="loc-icon"><Location /></el-icon>
+                    <span>{{ day.cityName }}</span>
+                  </div>
+                </td>
                 <td v-for="key in SUB_KEYS" :key="key" class="subsidy-td">
                   <div class="subsidy-cell">
                     <div class="std-label">
@@ -471,20 +484,51 @@ function handleConfirm() {
 .calendar-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 14px;
 }
 
 .calendar-table th,
 .calendar-table td {
-  border-bottom: 1px solid #e8e8e8;
+  border: 1px solid #e8e8e8;
   padding: 10px 8px;
   text-align: center;
   vertical-align: middle;
 }
 
+.calendar-table thead th {
+  border-top: none;
+}
+
+.calendar-table thead th:first-child,
+.calendar-table tbody td:first-child {
+  border-left: none;
+}
+
+.calendar-table thead th:last-child,
+.calendar-table tbody td:last-child {
+  border-right: none;
+}
+
+.calendar-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .calendar-table th {
   background: #fafafa;
   font-weight: normal;
+}
+
+.col-date {
+  width: 168px;
+}
+
+.col-city {
+  width: 88px;
+}
+
+.col-subsidy {
+  width: auto;
 }
 
 .th-inner {
@@ -495,27 +539,36 @@ function handleConfirm() {
 }
 
 .date-cell {
+  text-align: left;
+}
+
+.date-cell-inner {
   display: flex;
   align-items: center;
-  gap: 6px;
-  text-align: left;
-  padding-left: 10px !important;
-  min-width: 150px;
+  gap: 8px;
 }
 
 .date-text {
-  flex: 1;
+  min-width: 0;
 }
 
 .date-line {
   font-size: 14px;
   color: #333;
+  line-height: 20px;
 }
 
 .weekday {
   font-size: 12px;
   color: #999;
-  margin-top: 2px;
+  line-height: 18px;
+}
+
+.city-cell-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
 }
 
 .loc-icon {
@@ -528,10 +581,22 @@ function handleConfirm() {
   color: #333;
 }
 
+.subsidy-td {
+  padding: 8px 6px !important;
+}
+
+.subsidy-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
 .subsidy-cell .std-label {
   font-size: 12px;
   color: #fa8c16;
-  margin-bottom: 6px;
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 .subsidy-input-row {

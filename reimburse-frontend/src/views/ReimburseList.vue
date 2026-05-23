@@ -240,8 +240,15 @@ function handleSizeChange(size: number) {
         </el-row>
       </el-form>
 
-      <el-table v-loading="loading" :data="tableData" border class="list-table" style="width: 100%">
-        <el-table-column width="52" align="center" class-name="col-index">
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        border
+        fit
+        class="list-table"
+        style="width: 100%"
+      >
+        <el-table-column width="50" align="center" class-name="col-index">
           <template #header>
             <el-icon class="col-list-icon"><Operation /></el-icon>
           </template>
@@ -249,7 +256,7 @@ function handleSizeChange(size: number) {
             <span class="col-index-num">{{ (currentPage - 1) * pageSize + $index + 1 }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110" align="center" class-name="col-action">
+        <el-table-column label="操作" width="100" align="center" class-name="col-action">
           <template #default="{ row }">
             <div class="list-table-actions">
               <el-tooltip content="查看" placement="top">
@@ -275,35 +282,35 @@ function handleSizeChange(size: number) {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="报销单号" min-width="155">
+        <el-table-column label="报销单号" min-width="130" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="list-link" @click="goDetail(row)">{{ row.reimburseNo }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="单据状态" width="92" align="center">
+        <el-table-column label="单据状态" width="78" align="center">
           <template #default="{ row }">
             <span class="status-text">{{ DOC_STATUS_MAP[row.status] }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="docType" label="单据类型" width="120" show-overflow-tooltip />
-        <el-table-column label="报销人" min-width="140" show-overflow-tooltip>
+        <el-table-column prop="docType" label="单据类型" min-width="100" show-overflow-tooltip />
+        <el-table-column label="报销人" min-width="115" show-overflow-tooltip>
           <template #default="{ row }">{{ formatClaimant(row) }}</template>
         </el-table-column>
-        <el-table-column label="报销部门" min-width="180" show-overflow-tooltip>
+        <el-table-column label="报销部门" min-width="125" show-overflow-tooltip>
           <template #default="{ row }">{{ formatDepartment(row) }}</template>
         </el-table-column>
-        <el-table-column prop="companyName" label="费用归属公司" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="businessTypeName" label="业务类型" width="110" show-overflow-tooltip />
-        <el-table-column label="报销标题" min-width="170" show-overflow-tooltip>
+        <el-table-column prop="companyName" label="费用归属公司" min-width="125" show-overflow-tooltip />
+        <el-table-column prop="businessTypeName" label="业务类型" min-width="90" show-overflow-tooltip />
+        <el-table-column label="报销标题" min-width="125" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="list-link" @click="goDetail(row)">{{ row.title }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" label="报销事由" min-width="100" show-overflow-tooltip />
-        <el-table-column label="补助金额" width="96" align="right" header-align="right">
+        <el-table-column prop="reason" label="报销事由" min-width="90" show-overflow-tooltip />
+        <el-table-column label="补助金额" width="86" align="right" header-align="right">
           <template #default="{ row }">{{ formatMoney(row.subsidyAmount) }}</template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="112" />
+        <el-table-column prop="createTime" label="创建时间" width="100" show-overflow-tooltip />
       </el-table>
 
       <div class="list-pagination">
@@ -374,6 +381,21 @@ function handleSizeChange(size: number) {
   background: #fff;
 }
 
+.list-table {
+  width: 100%;
+}
+
+.list-table :deep(.el-table__inner-wrapper),
+.list-table :deep(.el-table__header),
+.list-table :deep(.el-table__body) {
+  width: 100% !important;
+}
+
+.list-table :deep(table) {
+  table-layout: fixed;
+  width: 100% !important;
+}
+
 .list-table :deep(.el-table__header th) {
   background: #fafafa !important;
   color: #333;
@@ -386,6 +408,18 @@ function handleSizeChange(size: number) {
   color: #333;
 }
 
+.list-table :deep(.el-table__cell) {
+  padding: 8px 0;
+}
+
+.list-table :deep(.cell) {
+  padding-left: 8px;
+  padding-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .list-table :deep(.el-table--border .el-table__cell) {
   border-color: #e8e8e8;
 }
@@ -394,7 +428,7 @@ function handleSizeChange(size: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .action-icon {
