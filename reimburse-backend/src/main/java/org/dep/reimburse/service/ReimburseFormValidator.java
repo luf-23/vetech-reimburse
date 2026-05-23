@@ -13,6 +13,12 @@ import java.util.Set;
 
 public final class ReimburseFormValidator {
 
+    /** 与前端一致：ratio 为 0~1 小数，合计应为 1 */
+    private static final BigDecimal RATIO_SUM_TARGET = BigDecimal.ONE;
+    private static final BigDecimal RATIO_SUM_TOLERANCE = new BigDecimal("0.001");
+    /** 与前端一致：各行金额四舍五入后允许 ±0.01 元误差 */
+    private static final BigDecimal AMOUNT_SUM_TOLERANCE = new BigDecimal("0.01");
+
     private ReimburseFormValidator() {
     }
 
@@ -83,7 +89,7 @@ public final class ReimburseFormValidator {
         BigDecimal ratioSum = form.getAllocations().stream()
                 .map(a -> a.getRatio() != null ? a.getRatio() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (ratioSum.compareTo(new BigDecimal("100")) != 0) {
+        if (ratioSum.subtract(RATIO_SUM_TARGET).abs().compareTo(RATIO_SUM_TOLERANCE) > 0) {
             return ValidateResultVO.fail("分摊比例合计必须为100%");
         }
 
@@ -91,7 +97,7 @@ public final class ReimburseFormValidator {
             BigDecimal amountSum = form.getAllocations().stream()
                     .map(a -> a.getAmount() != null ? a.getAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (amountSum.compareTo(subsidyTotal) != 0) {
+            if (amountSum.subtract(subsidyTotal).abs().compareTo(AMOUNT_SUM_TOLERANCE) > 0) {
                 return ValidateResultVO.fail("分摊金额合计必须等于补助总金额");
             }
         }

@@ -179,14 +179,21 @@ watch(
   },
 )
 
+/** 除不尽时差额放在首行，保证合计等于补助总金额 */
 function syncAllocationAmounts(total: number) {
-  form.allocations.forEach((row, idx) => {
-    if (idx === 0) {
-      row.amount = +(total * row.ratio).toFixed(2)
-    } else {
-      row.amount = +(total * row.ratio).toFixed(2)
-    }
-  })
+  const rows = form.allocations
+  if (rows.length === 0) return
+  if (rows.length === 1) {
+    rows[0]!.amount = +total.toFixed(2)
+    return
+  }
+  let othersAmount = 0
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]!
+    row.amount = +(total * row.ratio).toFixed(2)
+    othersAmount += row.amount
+  }
+  rows[0]!.amount = +(total - othersAmount).toFixed(2)
 }
 
 const itineraryDialogVisible = ref(false)
