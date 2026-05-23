@@ -1,5 +1,6 @@
 import { request } from './http'
 import type { ListQuery, ReimburseFormData, ReimburseListItem } from '@/types/reimburse'
+import { enrichListItem } from '@/data/masterData'
 import { normalizeReimburseForm } from '@/utils/normalizeReimburse'
 
 export interface PageResult<T> {
@@ -35,11 +36,11 @@ function toQuery(params: ListParams): string {
 }
 
 function normalizeListItem(row: ReimburseListItem): ReimburseListItem {
-  return {
+  return enrichListItem({
     ...row,
     status: Number(row.status) as ReimburseListItem['status'],
     subsidyAmount: Number(row.subsidyAmount),
-  }
+  })
 }
 
 export async function fetchReimburseList(params: ListParams) {

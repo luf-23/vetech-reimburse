@@ -1,4 +1,5 @@
 import type { DocStatus, ReimburseFormData, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
+import { enrichReimburseForm } from '@/data/masterData'
 import { syncSubsidiesWithItineraries } from '@/utils/reimburse'
 
 function toNum(v: unknown, fallback = 0): number {
@@ -61,7 +62,7 @@ export function normalizeReimburseForm(data: ReimburseFormData): ReimburseFormDa
     itineraries,
     (data.subsidies ?? []).map((s) => normalizeSubsidy(s as SubsidyInfoItem)),
   )
-  return {
+  return enrichReimburseForm({
     ...data,
     status: toNum(data.status, 0) as DocStatus,
     itineraries,
@@ -71,5 +72,5 @@ export function normalizeReimburseForm(data: ReimburseFormData): ReimburseFormDa
       ratio: toNum(a.ratio),
       amount: toNum(a.amount),
     })),
-  }
+  })
 }

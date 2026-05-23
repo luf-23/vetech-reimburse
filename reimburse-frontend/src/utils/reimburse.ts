@@ -1,14 +1,8 @@
 import dayjs from 'dayjs'
+import { findCity } from '@/data/masterData'
 import type { ItineraryItem, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
-import type { City } from '@/types/reimburse'
 
 const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-
-let citiesCache: City[] = []
-
-export function setCitiesCache(cities: City[]) {
-  citiesCache = [...cities]
-}
 
 export function getMealStandard(cityType: string): number {
   switch (cityType) {
@@ -58,7 +52,7 @@ export function getWeekday(date: string): string {
 }
 
 export function getCityType(cityNo: string): string {
-  return citiesCache.find((c) => c.cityNo === cityNo)?.cityType ?? '3'
+  return findCity(cityNo)?.cityType ?? '3'
 }
 
 export function createSubsidyCalendar(

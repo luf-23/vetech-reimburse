@@ -20,7 +20,7 @@ const emit = defineEmits<{
   save: [data: Omit<ItineraryItem, 'id'> & { id?: string }]
 }>()
 
-const { cities, reimbursers, ensureLoaded } = useMasterData()
+const { cities, reimbursers } = useMasterData()
 
 const travelerId = ref('')
 const departCityNo = ref('')
@@ -51,9 +51,8 @@ watch(dateRange, (val) => {
 
 watch(
   () => props.visible,
-  async (v) => {
+  (v) => {
     if (v) {
-      await ensureLoaded()
       pickingStartDate.value = null
       if (props.editData) {
         travelerId.value = props.editData.travelerId
@@ -161,9 +160,9 @@ function handleSave() {
     return
   }
 
-  const traveler = reimbursers.value.find((r) => r.reimburserId === travelerId.value)!
-  const depart = cities.value.find((c) => c.cityNo === departCityNo.value)!
-  const arrive = cities.value.find((c) => c.cityNo === arriveCityNo.value)!
+  const traveler = reimbursers.find((r) => r.reimburserId === travelerId.value)!
+  const depart = cities.find((c) => c.cityNo === departCityNo.value)!
+  const arrive = cities.find((c) => c.cityNo === arriveCityNo.value)!
 
   emit('save', {
     id: isEdit.value ? props.editData?.id : undefined,

@@ -11,7 +11,7 @@ import { formatMoney } from '@/utils/reimburse'
 import { buildBusinessTypeTree, isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 
 const router = useRouter()
-const { companies, departments, reimbursers, businessTypes, ensureLoaded } = useMasterData()
+const { companies, departments, reimbursers, businessTypes } = useMasterData()
 
 const query = reactive<ListQuery>({
   reimburseNo: '',
@@ -29,7 +29,7 @@ const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes.value))
+const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes))
 
 const lastQueryBusinessTypeId = ref('')
 
@@ -40,7 +40,7 @@ watch(
       lastQueryBusinessTypeId.value = ''
       return
     }
-    if (!isBusinessTypeLeaf(id, businessTypes.value)) {
+    if (!isBusinessTypeLeaf(id, businessTypes)) {
       query.businessTypeId = lastQueryBusinessTypeId.value
       ElMessage.warning('请选择末级业务类型')
     } else {
@@ -68,13 +68,8 @@ async function loadList() {
   }
 }
 
-onMounted(async () => {
-  try {
-    await ensureLoaded()
-    await loadList()
-  } catch {
-    await loadList()
-  }
+onMounted(() => {
+  void loadList()
 })
 
 function handleSearch() {
@@ -111,11 +106,11 @@ function formatDepartment(row: ReimburseListItem) {
   return `[${row.departmentNo}]${row.departmentName}`
 }
 
-function deptLabel(d: (typeof departments.value)[0]) {
+function deptLabel(d: (typeof departments)[0]) {
   return `[${d.reimDepartmentNo}]${d.reimDepartmentName}`
 }
 
-function reimburserLabel(r: (typeof reimbursers.value)[0]) {
+function reimburserLabel(r: (typeof reimbursers)[0]) {
   return `${r.reimburserName}[${r.reimburserNo}]`
 }
 

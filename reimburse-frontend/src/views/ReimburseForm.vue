@@ -35,8 +35,7 @@ import { validateReimburseForm } from '@/utils/validateReimburse'
 
 const route = useRoute()
 const router = useRouter()
-const { companies, departments, reimbursers, businessTypes, projects, ensureLoaded } =
-  useMasterData()
+const { companies, departments, reimbursers, businessTypes, projects } = useMasterData()
 
 const collapsed = reactive({
   basic: false,
@@ -109,7 +108,6 @@ function applyFormData(data: ReimburseFormData) {
 }
 
 async function loadFormData(editId?: string) {
-  await ensureLoaded()
   if (!editId) {
     initSubmitDate()
     return
@@ -137,11 +135,11 @@ watch(
 
 const businessTypeName = computed(
   () =>
-    businessTypes.value.find((b) => b.businessTypeId === form.businessTypeId)?.businessTypeName ??
+    businessTypes.find((b) => b.businessTypeId === form.businessTypeId)?.businessTypeName ??
     '',
 )
 
-const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes.value))
+const businessTypeTree = computed(() => buildBusinessTypeTree(businessTypes))
 
 const lastBusinessTypeId = ref(form.businessTypeId)
 
@@ -149,7 +147,7 @@ watch(
   () => form.businessTypeId,
   (id) => {
     if (!id) return
-    if (!isBusinessTypeLeaf(id, businessTypes.value)) {
+    if (!isBusinessTypeLeaf(id, businessTypes)) {
       form.businessTypeId = lastBusinessTypeId.value
       ElMessage.warning('请选择末级业务类型')
       return
@@ -387,7 +385,7 @@ function onCostAttributionChange(row: AllocationItem, id: string | undefined) {
     row.costAttributionName = ''
     return
   }
-  const c = companies.value.find((x) => x.reimCompanyId === id)
+  const c = companies.find((x) => x.reimCompanyId === id)
   row.costAttributionId = id
   row.costAttributionName = c?.reimCompanyName ?? ''
 }
@@ -398,7 +396,7 @@ function onProjectChange(row: AllocationItem, id: string | undefined) {
     row.projectName = ''
     return
   }
-  const p = projects.value.find((x) => x.projectId === id)
+  const p = projects.find((x) => x.projectId === id)
   row.projectId = id
   row.projectName = p?.projectName ?? ''
 }
@@ -441,7 +439,7 @@ const submitting = ref(false)
 async function handleSubmit() {
   if (submitting.value) return
 
-  const local = validateReimburseForm(form, expenseTotal.value.total, businessTypes.value)
+  const local = validateReimburseForm(form, expenseTotal.value.total, businessTypes)
   if (!local.valid) {
     ElMessage.warning(local.message)
     return
