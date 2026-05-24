@@ -266,7 +266,7 @@ function handleSizeChange(size: number) {
               <el-tooltip content="编辑" placement="top">
                 <el-icon
                   class="action-icon"
-                  :class="{ 'action-icon-muted': row.status === 0 || row.status === 2 }"
+                  :class="{ 'action-icon-muted': row.status !== 0 }"
                   @click="goDetail(row)"
                 ><Edit /></el-icon>
               </el-tooltip>

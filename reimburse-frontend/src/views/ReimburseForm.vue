@@ -18,6 +18,7 @@ import { useMasterData } from '@/composables/useMasterData'
 import {
   buildSubsidyFromItinerary,
   calcCalendarTotals,
+  distributeAllocationAmounts,
   formatMoney,
   formatPercent,
   genId,
@@ -179,21 +180,9 @@ watch(
   },
 )
 
-/** 除不尽时差额放在首行，保证合计等于补助总金额 */
+/** 除不尽时差额放在首行，保证合计严格等于补助总金额 */
 function syncAllocationAmounts(total: number) {
-  const rows = form.allocations
-  if (rows.length === 0) return
-  if (rows.length === 1) {
-    rows[0]!.amount = +total.toFixed(2)
-    return
-  }
-  let othersAmount = 0
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i]!
-    row.amount = +(total * row.ratio).toFixed(2)
-    othersAmount += row.amount
-  }
-  rows[0]!.amount = +(total - othersAmount).toFixed(2)
+  distributeAllocationAmounts(total, form.allocations)
 }
 
 const itineraryDialogVisible = ref(false)

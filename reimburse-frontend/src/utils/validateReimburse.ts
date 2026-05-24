@@ -158,7 +158,7 @@ export function validateReimburseForm(
   }
 
   const amountSum = form.allocations.reduce((s, r) => s + r.amount, 0)
-  if (Math.abs(amountSum - subsidyTotal) > 0.01) {
+  if (+amountSum.toFixed(2) !== +subsidyTotal.toFixed(2)) {
     return fail('分摊金额合计必须等于补助总金额')
   }
 

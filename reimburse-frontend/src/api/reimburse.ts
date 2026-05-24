@@ -44,7 +44,7 @@ function normalizeListItem(row: ReimburseListItem): ReimburseListItem {
 }
 
 export async function fetchReimburseList(params: ListParams) {
-  const data = await request<PageResult<ReimburseListItem>>(`/reimburse${toQuery(params)}`)
+  const data = await request<PageResult<ReimburseListItem>>(`/reimburse/list${toQuery(params)}`)
   return {
     ...data,
     records: data.records.map(normalizeListItem),
@@ -52,30 +52,30 @@ export async function fetchReimburseList(params: ListParams) {
 }
 
 export async function fetchReimburseDetail(id: string) {
-  const data = await request<ReimburseFormData>(`/reimburse/${id}`)
+  const data = await request<ReimburseFormData>(`/reimburse/detail/${id}`)
   return normalizeReimburseForm(data)
 }
 
 export function createReimburse(form: ReimburseFormData) {
-  return request<ReimburseFormData>('/reimburse', {
+  return request<ReimburseFormData>('/reimburse/create', {
     method: 'POST',
     body: JSON.stringify(form),
   })
 }
 
 export function updateReimburse(id: string, form: ReimburseFormData) {
-  return request<ReimburseFormData>(`/reimburse/${id}`, {
+  return request<ReimburseFormData>(`/reimburse/update/${id}`, {
     method: 'PUT',
     body: JSON.stringify(form),
   })
 }
 
 export function deleteReimburse(id: string) {
-  return request<void>(`/reimburse/${id}`, { method: 'DELETE' })
+  return request<void>(`/reimburse/delete/${id}`, { method: 'DELETE' })
 }
 
 export function copyReimburse(id: string) {
-  return request<ReimburseListItem>(`/reimburse/${id}/copy`, { method: 'POST' })
+  return request<ReimburseListItem>(`/reimburse/copy/${id}`, { method: 'POST' })
 }
 
 /** 5.2.2.9 提交时调用后台校验 */

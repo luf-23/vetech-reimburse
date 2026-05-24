@@ -1,8 +1,8 @@
-package org.dep.reimburse.service;
+package org.dep.reimburse.util;
 
-import org.dep.reimburse.dto.ItineraryItemDTO;
 import org.dep.reimburse.dto.ReimburseFormDTO;
-import org.dep.reimburse.dto.SubsidyInfoItemDTO;
+import org.dep.reimburse.dto.ReimburseFormDTO.ItineraryItem;
+import org.dep.reimburse.dto.ReimburseFormDTO.SubsidyInfoItem;
 import org.dep.reimburse.vo.ValidateResultVO;
 import org.springframework.util.StringUtils;
 
@@ -16,8 +16,6 @@ public final class ReimburseFormValidator {
     /** 与前端一致：ratio 为 0~1 小数，合计应为 1 */
     private static final BigDecimal RATIO_SUM_TARGET = BigDecimal.ONE;
     private static final BigDecimal RATIO_SUM_TOLERANCE = new BigDecimal("0.001");
-    /** 与前端一致：各行金额四舍五入后允许 ±0.01 元误差 */
-    private static final BigDecimal AMOUNT_SUM_TOLERANCE = new BigDecimal("0.01");
 
     private ReimburseFormValidator() {
     }
@@ -51,8 +49,8 @@ public final class ReimburseFormValidator {
             return ValidateResultVO.fail("备注信息不可超过1000字");
         }
 
-        List<ItineraryItemDTO> itineraries = form.getItineraries() != null ? form.getItineraries() : List.of();
-        List<SubsidyInfoItemDTO> subsidies = form.getSubsidies() != null ? form.getSubsidies() : List.of();
+        List<ItineraryItem> itineraries = form.getItineraries() != null ? form.getItineraries() : List.of();
+        List<SubsidyInfoItem> subsidies = form.getSubsidies() != null ? form.getSubsidies() : List.of();
 
         if (itineraries.isEmpty()) {
             return ValidateResultVO.fail("请补录行程");
@@ -63,7 +61,7 @@ public final class ReimburseFormValidator {
             return itinerarySubsidy;
         }
 
-        for (ItineraryItemDTO it : itineraries) {
+        for (ItineraryItem it : itineraries) {
             if (!StringUtils.hasText(it.getTravelerId())) {
                 return ValidateResultVO.fail("补录行程出行人员不能为空");
             }
@@ -97,7 +95,8 @@ public final class ReimburseFormValidator {
             BigDecimal amountSum = form.getAllocations().stream()
                     .map(a -> a.getAmount() != null ? a.getAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (amountSum.subtract(subsidyTotal).abs().compareTo(AMOUNT_SUM_TOLERANCE) > 0) {
+            if (AllocationAmountUtil.normalizeMoney(amountSum)
+                    .compareTo(AllocationAmountUtil.normalizeMoney(subsidyTotal)) != 0) {
                 return ValidateResultVO.fail("分摊金额合计必须等于补助总金额");
             }
         }
@@ -106,8 +105,8 @@ public final class ReimburseFormValidator {
     }
 
     public static ValidateResultVO validateItinerarySubsidyLink(
-            List<ItineraryItemDTO> itineraries,
-            List<SubsidyInfoItemDTO> subsidies
+            List<ItineraryItem> itineraries,
+            List<SubsidyInfoItem> subsidies
     ) {
         if (itineraries.isEmpty()) {
             if (!subsidies.isEmpty()) {
@@ -120,7 +119,7 @@ public final class ReimburseFormValidator {
         }
 
         Set<String> itineraryIds = new HashSet<>();
-        for (ItineraryItemDTO it : itineraries) {
+        for (ItineraryItem it : itineraries) {
             if (StringUtils.hasText(it.getId())) {
                 itineraryIds.add(it.getId());
             }
@@ -133,7 +132,7 @@ public final class ReimburseFormValidator {
         }
 
         Set<String> linkedItineraryIds = new HashSet<>();
-        for (SubsidyInfoItemDTO sub : subsidies) {
+        for (SubsidyInfoItem sub : subsidies) {
             if (!StringUtils.hasText(sub.getItineraryId())) {
                 return ValidateResultVO.fail("补助信息必须关联补录行程");
             }

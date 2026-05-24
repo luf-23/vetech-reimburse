@@ -153,11 +153,12 @@ npm run preview   # 本地预览构建结果
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/master` | 基础数据（公司、部门、报销人、业务类型、城市、项目） |
-| GET | `/api/reimburse` | 报销单分页列表（支持 `reimburseNo`、`title`、`page`、`size` 等查询参数） |
-| GET | `/api/reimburse/{id}` | 报销单详情 |
-| POST | `/api/reimburse` | 新建报销单 |
-| PUT | `/api/reimburse/{id}` | 更新报销单 |
-| DELETE | `/api/reimburse/{id}` | 删除报销单 |
-| POST | `/api/reimburse/{id}/copy` | 复制报销单 |
+| GET | `/api/reimburse/list` | 报销单分页列表（支持 `reimburseNo`、`title`、`page`、`size` 等查询参数） |
+| GET | `/api/reimburse/detail/{id}` | 报销单详情 |
+| POST | `/api/reimburse/create` | 新建报销单 |
+| PUT | `/api/reimburse/update/{id}` | 更新报销单 |
+| DELETE | `/api/reimburse/delete/{id}` | 删除报销单 |
+| POST | `/api/reimburse/copy/{id}` | 复制报销单 |
+| POST | `/api/reimburse/validate` | 提交前服务端校验 |
 
 统一响应包装为 `{ "code": 0, "message": "ok", "data": ... }`，`code !== 0` 表示业务或校验错误。
