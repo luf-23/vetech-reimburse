@@ -241,6 +241,7 @@ function handleSave() {
           v-model="dateRange"
           type="datetimerange"
           unlink-panels
+          size="small"
           range-separator="-"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
@@ -248,6 +249,8 @@ function handleSave() {
           value-format="YYYY-MM-DD HH:mm:ss"
           :default-time="defaultTime"
           :disabled-date="disabledDate"
+          placement="top-start"
+          :fallback-placements="['top-start', 'top', 'bottom-start']"
           clearable
           style="width: 100%"
           @calendar-change="onCalendarChange"

@@ -501,8 +501,10 @@ const allocationTotalAmount = computed(() =>
     <!-- 5.2.2.1 固定表头 -->
     <div class="reim-form-header-fixed">
       <div class="reim-form-content">
-        <h1 class="reim-form-title">差旅费用报销单</h1>
-        <div class="reim-form-date">提单日期 {{ form.submitDate }}</div>
+        <div class="reim-form-header-row">
+          <h1 class="reim-form-title">差旅费用报销单</h1>
+          <div class="reim-form-date">提单日期 {{ form.submitDate }}</div>
+        </div>
       </div>
     </div>
 
@@ -738,21 +740,11 @@ const allocationTotalAmount = computed(() =>
             </el-table-column>
             <el-table-column width="140" align="right" header-align="right">
               <template #header>
-                <div class="allocation-ratio-header">
-                  <el-button
-                    type="primary"
-                    link
-                    class="allocation-equal-btn"
-                    @click.stop="equalSplit"
-                  >
-                    均摊
-                  </el-button>
-                  <div class="allocation-ratio-header-row">
-                    <span><span class="allocation-required">*</span> 分摊比例</span>
-                    <el-icon class="allocation-refresh-icon" title="均摊" @click.stop="equalSplit">
-                      <Refresh />
-                    </el-icon>
-                  </div>
+                <div class="allocation-ratio-header-row">
+                  <span><span class="allocation-required">*</span> 分摊比例</span>
+                  <el-icon class="allocation-refresh-icon" title="均摊" @click.stop="equalSplit">
+                    <Refresh />
+                  </el-icon>
                 </div>
               </template>
               <template #default="{ row, $index }">
@@ -877,20 +869,6 @@ const allocationTotalAmount = computed(() =>
 .allocation-table :deep(.el-table__header th) {
   background: #fafafa !important;
   vertical-align: middle;
-}
-
-.allocation-ratio-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-}
-
-.allocation-equal-btn {
-  font-size: 14px;
-  padding: 0;
-  height: auto;
 }
 
 .allocation-ratio-header-row {

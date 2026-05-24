@@ -288,6 +288,7 @@ function handleConfirm() {
 
 .subsidy-calendar-dialog :deep(.el-dialog__body) {
   padding: 16px 20px;
+  overflow: hidden;
 }
 
 .subsidy-calendar-dialog :deep(.el-dialog__footer) {
@@ -298,7 +299,7 @@ function handleConfirm() {
 .calendar-layout {
   display: flex;
   gap: 16px;
-  min-height: 400px;
+  height:70vh;
 }
 
 .calendar-sidebar {
@@ -307,6 +308,7 @@ function handleConfirm() {
   padding: 0;
   background: transparent;
   border: none;
+  align-self: flex-start;
 }
 
 .sidebar-type {
@@ -461,6 +463,8 @@ function handleConfirm() {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .calendar-main-header {
@@ -469,6 +473,7 @@ function handleConfirm() {
   align-items: center;
   padding: 12px 14px;
   border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
 }
 
 .calendar-main-title {
@@ -477,8 +482,30 @@ function handleConfirm() {
 }
 
 .calendar-table-wrap {
-  overflow: auto;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 transparent;
+}
+
+.calendar-table-wrap::-webkit-scrollbar {
+  width: 4px;
+}
+
+.calendar-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.calendar-table-wrap::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.calendar-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .calendar-table {
@@ -517,6 +544,9 @@ function handleConfirm() {
 .calendar-table th {
   background: #fafafa;
   font-weight: normal;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .col-date {

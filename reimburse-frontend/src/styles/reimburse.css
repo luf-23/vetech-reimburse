@@ -8,7 +8,7 @@
   --reim-text: #333;
   --reim-text-secondary: #666;
   --reim-content-width: 1200px;
-  --reim-form-header-height: 76px;
+  --reim-form-header-height: 56px;
   --reim-form-footer-height: 64px;
   --reim-warning-bg: #fffbe6;
   --reim-warning-border: #ffe58f;
@@ -151,6 +151,7 @@ body {
 }
 
 .reim-form-scroll > .reim-form-content {
+  padding-top: 8px;
   padding-bottom: 16px;
 }
 
@@ -168,8 +169,16 @@ body {
   margin-bottom: 0;
 }
 
-/* 单据标题：20px 加粗 */
+/* 单据标题：20px 加粗，与提单日期同一行 */
+.reim-form-header-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 28px;
+}
+
 .reim-form-title {
+  grid-column: 2;
   font-size: 20px;
   font-weight: bold;
   text-align: center;
@@ -179,12 +188,13 @@ body {
 }
 
 .reim-form-date {
-  text-align: right;
+  grid-column: 3;
+  justify-self: end;
   font-size: 14px;
   color: var(--reim-text-secondary);
-  margin-top: 8px;
   padding-right: 16px;
   line-height: 20px;
+  white-space: nowrap;
 }
 
 /* 底栏固定在视口底部，但不遮挡滚动内容（与滚动区 flex 分列） */

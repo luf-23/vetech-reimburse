@@ -240,6 +240,7 @@ function handleSizeChange(size: number) {
         </el-row>
       </el-form>
 
+      <div class="list-table-wrap">
       <el-table
         v-loading="loading"
         :data="tableData"
@@ -312,6 +313,7 @@ function handleSizeChange(size: number) {
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="100" show-overflow-tooltip />
       </el-table>
+      </div>
 
       <div class="list-pagination">
         <el-pagination
@@ -331,14 +333,34 @@ function handleSizeChange(size: number) {
 
 <style scoped>
 .list-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
   padding: 16px;
   background: #f0f2f5;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .list-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: #fff;
-  padding: 16px 16px 12px;
+  padding: 16px 16px 0;
+}
+
+.list-query-form {
+  flex-shrink: 0;
+}
+
+.list-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .list-query-form :deep(.el-form-item) {
@@ -486,9 +508,14 @@ function handleSizeChange(size: number) {
 }
 
 .list-pagination {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  padding: 12px 0;
+  margin-top: 0;
+  border-top: 1px solid #e8e8e8;
+  background: #fff;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .list-pagination :deep(.el-pagination.is-background .el-pager li.is-active) {
