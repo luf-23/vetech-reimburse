@@ -130,10 +130,6 @@ async function handleDelete(row: ReimburseListItem) {
   }
 }
 
-function handleManualPush(row: ReimburseListItem) {
-  ElMessage.success(`已推送报销单 ${row.reimburseNo}`)
-}
-
 async function handleCopy(row: ReimburseListItem) {
   try {
     await copyReimburse(row.id)
@@ -275,7 +271,7 @@ function handleSizeChange(size: number) {
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item @click="handleDelete(row)">删除</el-dropdown-item>
-                    <el-dropdown-item @click="handleManualPush(row)">手工推送</el-dropdown-item>
+                    <el-dropdown-item disabled>手工推送</el-dropdown-item>
                     <el-dropdown-item @click="handleCopy(row)">复制</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>

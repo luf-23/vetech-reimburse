@@ -124,6 +124,8 @@ public class ReimburseServiceImpl implements ReimburseService {
     public ReimburseListItemVO copy(Long id) {
         ReimburseFormVO source = getById(id);
         ReimburseFormDTO copy = objectMapper.convertValue(source, ReimburseFormDTO.class);
+        copy.setId(null);
+        copy.setReimburseNo(null);
         copy.setStatus(0);
         copy.setTitle(source.getTitle() + "-副本");
         copy.setReason(source.getReason());
