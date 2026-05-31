@@ -1,6 +1,6 @@
 import type { DocStatus, ReimburseFormData, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
 import { enrichReimburseForm } from '@/data/masterData'
-import { syncSubsidiesWithItineraries } from '@/utils/reimburse'
+import { normalizeSubsidyCalendar, syncSubsidiesWithItineraries } from '@/utils/reimburse'
 
 function toNum(v: unknown, fallback = 0): number {
   if (v == null || v === '') return fallback
@@ -51,7 +51,7 @@ function normalizeSubsidy(sub: SubsidyInfoItem): SubsidyInfoItem {
     mealTotal: toNum(sub.mealTotal),
     transportTotal: toNum(sub.transportTotal),
     commTotal: toNum(sub.commTotal),
-    calendar: normalizeCalendar(sub.calendar as unknown),
+    calendar: normalizeSubsidyCalendar(normalizeCalendar(sub.calendar as unknown)),
   }
 }
 

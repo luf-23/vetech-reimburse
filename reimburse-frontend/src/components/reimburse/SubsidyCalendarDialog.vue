@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { Location } from '@element-plus/icons-vue'
 import type { SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
-import { calcCalendarTotals, formatMoney } from '@/utils/reimburse'
+import { calcCalendarTotals, formatMoney, normalizeSubsidyCalendar } from '@/utils/reimburse'
 
 const props = defineProps<{
   visible: boolean
@@ -31,7 +31,9 @@ watch(
   () => props.visible,
   (v) => {
     if (v && props.subsidy) {
-      calendar.value = JSON.parse(JSON.stringify(props.subsidy.calendar))
+      calendar.value = normalizeSubsidyCalendar(
+        JSON.parse(JSON.stringify(props.subsidy.calendar)),
+      )
     }
   },
 )

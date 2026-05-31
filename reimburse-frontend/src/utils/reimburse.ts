@@ -75,6 +75,19 @@ export function createSubsidyCalendar(
   }))
 }
 
+/** 未勾选项的金额展示为标准额（兼容后端 amount=0 的历史数据） */
+export function normalizeSubsidyCalendar(calendar: SubsidyDayItem[]): SubsidyDayItem[] {
+  return calendar.map((day) => ({
+    ...day,
+    meal: { ...day.meal, amount: day.meal.checked ? day.meal.amount : day.meal.standard },
+    transport: {
+      ...day.transport,
+      amount: day.transport.checked ? day.transport.amount : day.transport.standard,
+    },
+    comm: { ...day.comm, amount: day.comm.checked ? day.comm.amount : day.comm.standard },
+  }))
+}
+
 export function calcCalendarTotals(calendar: SubsidyDayItem[]) {
   let subsidyAmount = 0
   let standardTotal = 0

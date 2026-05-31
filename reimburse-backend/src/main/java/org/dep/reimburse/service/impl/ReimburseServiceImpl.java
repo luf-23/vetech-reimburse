@@ -1,6 +1,5 @@
 package org.dep.reimburse.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -47,10 +46,7 @@ public class ReimburseServiceImpl implements ReimburseService {
         int pageNum = Math.max(query.getPage(), 1);
         int size = query.getSize() <= 0 ? 10 : query.getSize();
 
-        LambdaQueryWrapper<ReimburseDoc> wrapper = buildQueryWrapper(query);
-        wrapper.orderByDesc(ReimburseDoc::getCreateTime).orderByDesc(ReimburseDoc::getId);
-
-        Page<ReimburseDoc> pageData = docMapper.selectPage(new Page<>(pageNum, size), wrapper);
+        Page<ReimburseDoc> pageData = docMapper.selectPageByQuery(new Page<>(pageNum, size), query);
 
         List<ReimburseListItemVO> records = pageData.getRecords().stream()
                 .map(this::toListItem)
@@ -160,32 +156,6 @@ public class ReimburseServiceImpl implements ReimburseService {
         return ReimburseFormValidator.validate(request, request.getSubsidyTotal());
     }
 
-    private LambdaQueryWrapper<ReimburseDoc> buildQueryWrapper(ReimburseListQueryDTO query) {
-        LambdaQueryWrapper<ReimburseDoc> wrapper = Wrappers.lambdaQuery();
-        if (StringUtils.hasText(query.getReimburseNo())) {
-            wrapper.like(ReimburseDoc::getReimburseNo, query.getReimburseNo().trim());
-        }
-        if (StringUtils.hasText(query.getTitle())) {
-            wrapper.like(ReimburseDoc::getTitle, query.getTitle().trim());
-        }
-        if (StringUtils.hasText(query.getReason())) {
-            wrapper.like(ReimburseDoc::getReason, query.getReason().trim());
-        }
-        if (StringUtils.hasText(query.getCompanyId())) {
-            wrapper.eq(ReimburseDoc::getCompanyId, query.getCompanyId());
-        }
-        if (StringUtils.hasText(query.getDepartmentId())) {
-            wrapper.eq(ReimburseDoc::getDepartmentId, query.getDepartmentId());
-        }
-        if (StringUtils.hasText(query.getReimburserId())) {
-            wrapper.eq(ReimburseDoc::getReimburserId, query.getReimburserId());
-        }
-        if (StringUtils.hasText(query.getBusinessTypeId())) {
-            wrapper.eq(ReimburseDoc::getBusinessTypeId, query.getBusinessTypeId());
-        }
-        return wrapper;
-    }
-
     private void deleteChildren(Long docId) {
         itineraryMapper.delete(Wrappers.<ReimburseItinerary>lambdaQuery().eq(ReimburseItinerary::getDocId, docId));
         subsidyMapper.delete(Wrappers.<ReimburseSubsidy>lambdaQuery().eq(ReimburseSubsidy::getDocId, docId));
@@ -196,16 +166,14 @@ public class ReimburseServiceImpl implements ReimburseService {
         return itineraryMapper.selectList(
                 Wrappers.<ReimburseItinerary>lambdaQuery()
                         .eq(ReimburseItinerary::getDocId, docId)
-                        .orderByAsc(ReimburseItinerary::getId)
-        );
+                        .orderByAsc(ReimburseItinerary::getId));
     }
 
     private List<ReimburseSubsidy> listSubsidies(Long docId) {
         return subsidyMapper.selectList(
                 Wrappers.<ReimburseSubsidy>lambdaQuery()
                         .eq(ReimburseSubsidy::getDocId, docId)
-                        .orderByAsc(ReimburseSubsidy::getId)
-        );
+                        .orderByAsc(ReimburseSubsidy::getId));
     }
 
     private List<ReimburseAllocation> listAllocations(Long docId) {
@@ -213,8 +181,7 @@ public class ReimburseServiceImpl implements ReimburseService {
                 Wrappers.<ReimburseAllocation>lambdaQuery()
                         .eq(ReimburseAllocation::getDocId, docId)
                         .orderByAsc(ReimburseAllocation::getSortOrder)
-                        .orderByAsc(ReimburseAllocation::getId)
-        );
+                        .orderByAsc(ReimburseAllocation::getId));
     }
 
     private ReimburseListItemVO toListItem(ReimburseDoc doc) {

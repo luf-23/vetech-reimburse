@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dep.reimburse.mapper.ReimburseDocMapper">
+
+    <select id="selectPageByQuery" resultType="ReimburseDoc">
+        SELECT id, reimburse_no, doc_type, status, reimburser_id, department_id, company_id, business_type_id, title, reason, subsidy_amount, submit_date, create_time, remark
+        FROM reimburse_doc
+        WHERE (#{query.reimburseNo} = '' OR reimburse_no LIKE CONCAT('%', TRIM(#{query.reimburseNo}), '%'))
+        AND (#{query.title} = '' OR title LIKE CONCAT('%', TRIM(#{query.title}), '%'))
+        AND (#{query.reason} = '' OR reason LIKE CONCAT('%', TRIM(#{query.reason}), '%'))
+        AND (#{query.companyId} = '' OR company_id = #{query.companyId})
+        AND (#{query.departmentId} = '' OR department_id = #{query.departmentId})
+        AND (#{query.reimburserId} = '' OR reimburser_id = #{query.reimburserId})
+        AND (#{query.businessTypeId} = '' OR business_type_id = #{query.businessTypeId}) ORDER BY create_time DESC, id DESC
+    </select>
+
+</mapper>
