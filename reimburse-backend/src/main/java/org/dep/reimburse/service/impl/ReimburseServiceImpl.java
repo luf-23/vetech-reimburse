@@ -11,6 +11,7 @@ import org.dep.reimburse.common.PageResult;
 import org.dep.reimburse.dto.*;
 import org.dep.reimburse.util.AllocationAmountUtil;
 import org.dep.reimburse.util.ReimburseFormValidator;
+import org.dep.reimburse.service.ReimburseDocCacheService;
 import org.dep.reimburse.service.ReimburseService;
 import org.dep.reimburse.vo.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,8 @@ public class ReimburseServiceImpl implements ReimburseService {
 
     @Autowired
     private ReimburseDocMapper docMapper;
+    @Autowired
+    private ReimburseDocCacheService docCacheService;
     @Autowired
     private ReimburseItineraryMapper itineraryMapper;
     @Autowired
@@ -58,7 +61,7 @@ public class ReimburseServiceImpl implements ReimburseService {
     @Override
     @Transactional(readOnly = true)
     public ReimburseFormVO getById(Long id) {
-        ReimburseDoc doc = docMapper.selectById(id);
+        ReimburseDoc doc = docCacheService.loadById(id);
         if (doc == null) {
             throw new NoSuchElementException("报销单不存在");
         }
@@ -102,6 +105,7 @@ public class ReimburseServiceImpl implements ReimburseService {
         saveChildren(doc.getId(), form);
         doc.setSubsidyAmount(calcDocSubsidyTotal(doc.getId()));
         docMapper.updateById(doc);
+        docCacheService.evict(doc.getId());
 
         return getById(doc.getId());
     }
@@ -113,6 +117,7 @@ public class ReimburseServiceImpl implements ReimburseService {
             throw new NoSuchElementException("报销单不存在");
         }
         docMapper.deleteById(id);
+        docCacheService.evict(id);
     }
 
     @Override
@@ -146,7 +151,7 @@ public class ReimburseServiceImpl implements ReimburseService {
             alloc.setId(null);
         }
         ReimburseFormVO saved = save(copy);
-        ReimburseDoc doc = docMapper.selectById(Long.parseLong(saved.getId()));
+        ReimburseDoc doc = docCacheService.loadById(Long.parseLong(saved.getId()));
         return toListItem(doc);
     }
 
