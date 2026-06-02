@@ -7,7 +7,7 @@ import type { ListQuery, ReimburseListItem } from '@/types/reimburse'
 import { DOC_STATUS_MAP } from '@/data/constants'
 import { useMasterData } from '@/composables/useMasterData'
 import { copyReimburse, deleteReimburse, fetchReimburseList } from '@/api/reimburse'
-import { formatMoney } from '@/utils/reimburse'
+import { formatMoney } from '@/utils/format'
 import { buildBusinessTypeTree, isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 
 const router = useRouter()

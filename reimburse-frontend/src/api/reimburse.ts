@@ -1,6 +1,6 @@
 import { request } from './http'
 import type { ListQuery, ReimburseFormData, ReimburseListItem } from '@/types/reimburse'
-import { enrichListItem } from '@/data/masterData'
+import { enrichListItem } from '@/utils/enrichReimburse'
 import { normalizeReimburseForm } from '@/utils/normalizeReimburse'
 
 export interface PageResult<T> {
