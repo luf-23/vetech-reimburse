@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { Location } from '@element-plus/icons-vue'
 import type { SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
-import { calcCalendarTotals } from '@/utils/subsidy'
+import { calcCalendarTotals, normalizeSubsidyCalendar } from '@/utils/subsidy'
 import { formatMoney } from '@/utils/format'
 
 const props = defineProps<{
@@ -32,7 +32,9 @@ watch(
   () => props.visible,
   (v) => {
     if (v && props.subsidy) {
-      calendar.value = JSON.parse(JSON.stringify(props.subsidy.calendar))
+      calendar.value = normalizeSubsidyCalendar(
+        JSON.parse(JSON.stringify(props.subsidy.calendar)),
+      )
     }
   },
 )
@@ -511,7 +513,8 @@ function handleConfirm() {
 
 .calendar-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   font-size: 14px;
 }
@@ -542,12 +545,25 @@ function handleConfirm() {
   border-bottom: none;
 }
 
+.calendar-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
 .calendar-table th {
   background: #fafafa;
   font-weight: normal;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 20;
+  box-shadow: 0 1px 0 #e8e8e8;
+}
+
+.calendar-table tbody td {
+  position: relative;
+  z-index: 0;
+  background: #fff;
 }
 
 .col-date {
@@ -567,6 +583,8 @@ function handleConfirm() {
   align-items: center;
   gap: 4px;
   justify-content: center;
+  position: relative;
+  z-index: 21;
 }
 
 .date-cell {

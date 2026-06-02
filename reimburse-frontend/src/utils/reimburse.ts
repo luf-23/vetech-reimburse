@@ -8,5 +8,6 @@ export {
   buildSubsidyFromItinerary,
   calcCalendarTotals,
   createSubsidyCalendar,
+  normalizeSubsidyCalendar,
   syncSubsidiesWithItineraries,
 } from '@/utils/subsidy'

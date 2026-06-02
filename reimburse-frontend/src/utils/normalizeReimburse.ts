@@ -1,6 +1,6 @@
 import type { DocStatus, ReimburseFormData, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
 import { enrichReimburseForm } from '@/utils/enrichReimburse'
-import { syncSubsidiesWithItineraries } from '@/utils/subsidy'
+import { normalizeSubsidyCalendar, syncSubsidiesWithItineraries } from '@/utils/subsidy'
 
 function toNum(v: unknown, fallback = 0): number {
   if (v == null || v === '') return fallback
@@ -9,11 +9,8 @@ function toNum(v: unknown, fallback = 0): number {
 }
 
 function normalizeCalendar(raw: unknown): SubsidyDayItem[] {
-  if (!raw) return []
-  if (Array.isArray(raw)) {
-    return raw.map((day) => normalizeDay(day as SubsidyDayItem))
-  }
-  return []
+  if (!raw || !Array.isArray(raw)) return []
+  return normalizeSubsidyCalendar(raw.map((day) => normalizeDay(day as SubsidyDayItem)))
 }
 
 function normalizeDay(day: SubsidyDayItem): SubsidyDayItem {

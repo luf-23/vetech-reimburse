@@ -22,6 +22,30 @@ export function getCityType(cityNo: string): string {
   return findCity(cityNo)?.cityType ?? '3'
 }
 
+type SubsidyCell = SubsidyDayItem['meal']
+
+/** 未勾选项展示标准额（兼容后端 calendar 里 amount=0 的历史数据） */
+export function normalizeSubsidyCell(cell: Partial<SubsidyCell> | undefined): SubsidyCell {
+  const standard = Number(cell?.standard ?? 0)
+  const checked = !!cell?.checked
+  const rawAmount = Number(cell?.amount ?? 0)
+  return {
+    checked,
+    standard,
+    amount: checked ? rawAmount : standard,
+  }
+}
+
+/** 打开补助日历时规范化展示：未勾选行的输入框显示默认标准额 */
+export function normalizeSubsidyCalendar(calendar: SubsidyDayItem[]): SubsidyDayItem[] {
+  return calendar.map((day) => ({
+    ...day,
+    meal: normalizeSubsidyCell(day.meal),
+    transport: normalizeSubsidyCell(day.transport),
+    comm: normalizeSubsidyCell(day.comm),
+  }))
+}
+
 export function createSubsidyCalendar(
   startDate: string,
   endDate: string,
