@@ -70,44 +70,28 @@ public class ReimburseServiceImpl implements ReimburseService {
 
     @Override
     @Transactional
-    public ReimburseFormVO save(ReimburseFormDTO form) {
-        ReimburseDoc doc;
-        if (StringUtils.hasText(form.getId())) {
-            Long id = Long.parseLong(form.getId());
-            doc = docMapper.selectById(id);
-            if (doc == null) {
-                throw new NoSuchElementException("报销单不存在");
-            }
-            deleteChildren(id);
-        } else {
-            doc = new ReimburseDoc();
-            doc.setReimburseNo(generateReimburseNo());
-            doc.setDocType("差旅费用报销单");
-            doc.setStatus(0);
-            doc.setCreateTime(LocalDate.now());
+    public ReimburseFormVO create(ReimburseFormDTO form) {
+        form.setId(null);
+        ReimburseDoc doc = new ReimburseDoc();
+        doc.setReimburseNo(generateReimburseNo());
+        doc.setDocType("差旅费用报销单");
+        doc.setStatus(0);
+        doc.setCreateTime(LocalDate.now());
+
+        return persistDoc(doc, form, true);
+    }
+
+    @Override
+    @Transactional
+    public ReimburseFormVO update(Long id, ReimburseFormDTO form) {
+        ReimburseDoc doc = docMapper.selectById(id);
+        if (doc == null) {
+            throw new NoSuchElementException("报销单不存在");
         }
+        form.setId(String.valueOf(id));
+        deleteChildren(id);
 
-        BigDecimal subsidyTotal = calcFormSubsidyTotal(form);
-        AllocationAmountUtil.distribute(subsidyTotal, form.getAllocations());
-
-        ValidateResultVO validation = ReimburseFormValidator.validate(form, subsidyTotal);
-        if (!validation.isValid()) {
-            throw new IllegalArgumentException(validation.getMessage());
-        }
-
-        applyHeader(doc, form);
-        if (doc.getId() == null) {
-            docMapper.insert(doc);
-        } else {
-            docMapper.updateById(doc);
-        }
-
-        saveChildren(doc.getId(), form);
-        doc.setSubsidyAmount(calcDocSubsidyTotal(doc.getId()));
-        docMapper.updateById(doc);
-        docCacheService.evict(doc.getId());
-
-        return getById(doc.getId());
+        return persistDoc(doc, form, false);
     }
 
     @Override
@@ -123,7 +107,7 @@ public class ReimburseServiceImpl implements ReimburseService {
     @Override
     @Transactional
     public ReimburseListItemVO copy(Long id) {
-        ReimburseFormVO source = getById(id);
+        ReimburseFormVO source = getFormByIdFromDb(id);
         ReimburseFormDTO copy = objectMapper.convertValue(source, ReimburseFormDTO.class);
         copy.setId(null);
         copy.setReimburseNo(null);
@@ -150,8 +134,8 @@ public class ReimburseServiceImpl implements ReimburseService {
         for (ReimburseFormDTO.AllocationItem alloc : copy.getAllocations()) {
             alloc.setId(null);
         }
-        ReimburseFormVO saved = save(copy);
-        ReimburseDoc doc = docCacheService.loadById(Long.parseLong(saved.getId()));
+        ReimburseFormVO saved = create(copy);
+        ReimburseDoc doc = getDocByIdFromDb(Long.parseLong(saved.getId()));
         return toListItem(doc);
     }
 
@@ -165,6 +149,42 @@ public class ReimburseServiceImpl implements ReimburseService {
         itineraryMapper.delete(Wrappers.<ReimburseItinerary>lambdaQuery().eq(ReimburseItinerary::getDocId, docId));
         subsidyMapper.delete(Wrappers.<ReimburseSubsidy>lambdaQuery().eq(ReimburseSubsidy::getDocId, docId));
         allocationMapper.delete(Wrappers.<ReimburseAllocation>lambdaQuery().eq(ReimburseAllocation::getDocId, docId));
+    }
+
+    private ReimburseFormVO persistDoc(ReimburseDoc doc, ReimburseFormDTO form, boolean isNew) {
+        BigDecimal subsidyTotal = calcFormSubsidyTotal(form);
+        AllocationAmountUtil.distribute(subsidyTotal, form.getAllocations());
+
+        ValidateResultVO validation = ReimburseFormValidator.validate(form, subsidyTotal);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
+        }
+
+        applyHeader(doc, form);
+        if (isNew) {
+            docMapper.insert(doc);
+        } else {
+            docMapper.updateById(doc);
+        }
+
+        saveChildren(doc.getId(), form);
+        doc.setSubsidyAmount(calcDocSubsidyTotal(doc.getId()));
+        docMapper.updateById(doc);
+        docCacheService.evict(doc.getId());
+
+        return getFormByIdFromDb(doc.getId());
+    }
+
+    private ReimburseFormVO getFormByIdFromDb(Long id) {
+        return toFormVO(getDocByIdFromDb(id));
+    }
+
+    private ReimburseDoc getDocByIdFromDb(Long id) {
+        ReimburseDoc doc = docMapper.selectById(id);
+        if (doc == null) {
+            throw new NoSuchElementException("报销单不存在");
+        }
+        return doc;
     }
 
     private List<ReimburseItinerary> listItineraries(Long docId) {

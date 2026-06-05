@@ -14,7 +14,9 @@ public interface ReimburseService {
 
     ReimburseFormVO getById(Long id);
 
-    ReimburseFormVO save(ReimburseFormDTO form);
+    ReimburseFormVO create(ReimburseFormDTO form);
+
+    ReimburseFormVO update(Long id, ReimburseFormDTO form);
 
     void delete(Long id);
 

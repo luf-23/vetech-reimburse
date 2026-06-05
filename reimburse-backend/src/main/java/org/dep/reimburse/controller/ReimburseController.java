@@ -35,15 +35,13 @@ public class ReimburseController {
     // POST /api/reimburse/create — 新建报销单
     @PostMapping("/create")
     public Result<ReimburseFormVO> create(@RequestBody ReimburseFormDTO form) {
-        form.setId(null);
-        return Result.success(reimburseService.save(form));
+        return Result.success(reimburseService.create(form));
     }
 
     // PUT /api/reimburse/update/{id} — 更新指定报销单
     @PutMapping("/update/{id}")
     public Result<ReimburseFormVO> update(@PathVariable Long id, @RequestBody ReimburseFormDTO form) {
-        form.setId(String.valueOf(id));
-        return Result.success(reimburseService.save(form));
+        return Result.success(reimburseService.update(id, form));
     }
 
     // DELETE /api/reimburse/delete/{id} — 删除指定报销单
