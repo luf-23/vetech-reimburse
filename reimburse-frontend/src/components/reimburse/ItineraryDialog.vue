@@ -1,4 +1,17 @@
 <script setup lang="ts">
+/**
+ * 行程补录/编辑弹窗。
+ * 用于新增、编辑或复制补录行程，填写出行人、起止城市、日期范围与行程说明。
+ *
+ * 日期禁用逻辑（disabledDate）：
+ * - 禁止选择晚于今天的日期；
+ * - 用户先选开始日期后（pickingStartDate），结束日期不可早于开始日期。
+ * onCalendarChange 在 datetimerange 只选了起点时记录 pickingStartDate，选完区间后清空。
+ *
+ * 重复校验（handleSave）：
+ * - 调用 isItineraryDuplicate，同一出行人在相同日期区间内不可重复；
+ * - 编辑时排除当前行 id，复制时通过 excludeId 排除源行。
+ */
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
@@ -30,7 +43,6 @@ const arriveCityNo = ref('')
 const dateRange = ref<[string, string] | null>(null)
 const description = ref('')
 
-/** 正在选择区间时暂存的出发日期（用于禁用早于出发的到达日） */
 const pickingStartDate = ref<string | null>(null)
 
 const isEdit = computed(() => !!props.editData?.id && !props.isCopy)
@@ -81,11 +93,7 @@ function resetForm() {
   pickingStartDate.value = null
 }
 
-/**
- * 禁用规则：
- * 1. 不可晚于当前日期
- * 2. 选择到达日时，不可早于已选出发日（允许跨月，只要 <= 今天）
- */
+/** 日期选择器禁用规则：不可选未来日期；选完起点后终点不可早于起点 */
 function disabledDate(time: Date) {
   const cell = dayjs(time).startOf('day')
   const maxDay = dayjs(today).startOf('day')
@@ -104,6 +112,7 @@ function disabledDate(time: Date) {
   return false
 }
 
+/** 记录 range 选择过程中的起点，供 disabledDate 限制终点范围 */
 function onCalendarChange(val: [Date, Date] | [string, string] | null) {
   if (!val || !val[0]) {
     pickingStartDate.value = null
@@ -157,6 +166,7 @@ function handleSave() {
   }
 
   const excludeId = isEdit.value ? props.editData?.id : props.excludeId
+  /** 同一出行人在日期区间重叠时视为重复，编辑/复制时排除自身 */
   if (isItineraryDuplicate(props.existingList, travelerId.value, start, end, excludeId)) {
     ElMessage.warning('该人员在此日期范围内已有行程，不可重复')
     return

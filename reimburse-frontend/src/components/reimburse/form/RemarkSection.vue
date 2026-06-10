@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 备注信息区块。
+ * 多行文本输入报销备注，标题栏提供「删除备注」操作（清空并隐藏本区块）。
+ */
 import { Delete } from '@element-plus/icons-vue'
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import type { ReimburseFormData } from '@/types/reimburse'

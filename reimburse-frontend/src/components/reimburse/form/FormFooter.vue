@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 报销表单底部操作栏（固定底部）。
+ * 提供「关闭」与「提交」按钮，提交时展示 loading 状态。
+ */
 defineProps<{
   submitting: boolean
 }>()

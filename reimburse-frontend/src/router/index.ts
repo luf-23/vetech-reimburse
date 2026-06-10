@@ -1,3 +1,7 @@
+/**
+ * 前端路由：报销列表、新建表单、编辑表单。
+ */
+
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({

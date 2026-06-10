@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 报销表单通用折叠面板容器。
+ * 提供统一的区块标题栏、右侧操作插槽与收起/展开按钮，内容区通过默认插槽渲染。
+ */
 import { CaretBottom, CaretTop } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 

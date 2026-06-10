@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * 报销单列表页
+ *
+ * 提供多条件查询、分页表格展示，以及新增、查看/编辑、删除、复制等入口。
+ * 查询条件与主数据（公司、部门、报销人、业务类型）联动，业务类型限制为末级节点。
+ */
+
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -49,6 +56,7 @@ watch(
   },
 )
 
+/** 按当前查询条件与分页参数拉取列表数据 */
 async function loadList() {
   loading.value = true
   try {
@@ -72,11 +80,13 @@ onMounted(() => {
   void loadList()
 })
 
+/** 搜索：重置到第一页并重新加载 */
 function handleSearch() {
   currentPage.value = 1
   loadList()
 }
 
+/** 清空所有查询条件并重新加载 */
 function handleClear() {
   query.reimburseNo = ''
   query.title = ''
@@ -90,30 +100,37 @@ function handleClear() {
   loadList()
 }
 
+/** 跳转新建报销单 */
 function goNew() {
   router.push('/reimburse/form')
 }
 
+/** 跳转报销单详情/编辑页 */
 function goDetail(row: ReimburseListItem) {
   router.push(`/reimburse/form/${row.id}`)
 }
 
+/** 格式化报销人显示：姓名[工号] */
 function formatClaimant(row: ReimburseListItem) {
   return `${row.reimburserName}[${row.reimburserNo}]`
 }
 
+/** 格式化部门显示：[部门编号]部门名称 */
 function formatDepartment(row: ReimburseListItem) {
   return `[${row.departmentNo}]${row.departmentName}`
 }
 
+/** 部门下拉选项文案 */
 function deptLabel(d: (typeof departments)[0]) {
   return `[${d.reimDepartmentNo}]${d.reimDepartmentName}`
 }
 
+/** 报销人下拉选项文案 */
 function reimburserLabel(r: (typeof reimbursers)[0]) {
   return `${r.reimburserName}[${r.reimburserNo}]`
 }
 
+/** 删除报销单，确认后刷新列表 */
 async function handleDelete(row: ReimburseListItem) {
   try {
     await ElMessageBox.confirm('确认删除该报销单?', '提示', {
@@ -130,6 +147,7 @@ async function handleDelete(row: ReimburseListItem) {
   }
 }
 
+/** 复制报销单，成功后回到第一页并刷新 */
 async function handleCopy(row: ReimburseListItem) {
   try {
     await copyReimburse(row.id)
@@ -141,11 +159,13 @@ async function handleCopy(row: ReimburseListItem) {
   }
 }
 
+/** 页码变更 */
 function handlePageChange(page: number) {
   currentPage.value = page
   loadList()
 }
 
+/** 每页条数变更，重置到第一页 */
 function handleSizeChange(size: number) {
   pageSize.value = size
   currentPage.value = 1
@@ -156,7 +176,7 @@ function handleSizeChange(size: number) {
 <template>
   <div class="list-page">
     <div class="list-card">
-      <!-- 5.1.2.1 列表查询条件 -->
+      
       <el-form :model="query" label-width="100px" class="list-query-form">
         <el-row :gutter="16">
           <el-col :span="6">

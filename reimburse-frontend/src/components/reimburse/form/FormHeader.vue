@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 报销表单页眉（固定顶部）。
+ * 展示单据标题「差旅费用报销单」与提单日期，不参与滚动区域。
+ */
 defineProps<{
   submitDate: string
 }>()

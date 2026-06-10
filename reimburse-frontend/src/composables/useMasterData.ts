@@ -1,6 +1,10 @@
+/**
+ * 主数据组合式函数：向组件暴露公司、部门、人员等下拉选项数据。
+ */
+
 import { MASTER_DATA } from '@/data/masterData'
 
-/** 5.3 主数据（只读，与 masterData.ts 同源） */
+/** 返回全部主数据引用，供表单下拉与名称补全使用 */
 export function useMasterData() {
   return {
     companies: MASTER_DATA.companies,

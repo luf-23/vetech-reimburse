@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 补助信息区块。
+ * 展示按出行人/行程汇总的补助列表（天数、路线、城市、申请金额与补助金额）。
+ * 标题栏显示 summaryTotal 及 summaryParts 汇总文案；顶部黄色提示条说明核减规则。
+ * 点击编辑图标打开 SubsidyCalendarDialog，由父组件传入 calendar 数据并回写确认结果。
+ */
 import { Edit, WarningFilled } from '@element-plus/icons-vue'
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import type { SubsidyInfoItem } from '@/types/reimburse'

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 费用合计区块。
+ * 只读展示补助总金额及餐费、交通、通讯三类分项合计，数据由父组件汇总传入。
+ */
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import { formatMoney } from '@/utils/format'
 

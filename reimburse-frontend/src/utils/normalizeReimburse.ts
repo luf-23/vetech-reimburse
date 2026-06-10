@@ -1,3 +1,7 @@
+/**
+ * 报销表单数据规范化：将接口返回的松散数据转为类型安全、结构完整的表单对象。
+ */
+
 import type { DocStatus, ReimburseFormData, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
 import { enrichReimburseForm } from '@/utils/enrichReimburse'
 import { normalizeSubsidyCalendar, syncSubsidiesWithItineraries } from '@/utils/subsidy'
@@ -52,7 +56,7 @@ function normalizeSubsidy(sub: SubsidyInfoItem): SubsidyInfoItem {
   }
 }
 
-/** 将后端返回的报销单详情规范为前端表单结构 */
+/** 规范化整张报销表单：数字字段、补助日历、行程与补助同步，并补全主数据名称 */
 export function normalizeReimburseForm(data: ReimburseFormData): ReimburseFormData {
   const itineraries = data.itineraries ?? []
   const subsidies = syncSubsidiesWithItineraries(

@@ -1,7 +1,12 @@
+/**
+ * 差旅补助计算：餐补/交通/通讯标准、日历生成、汇总及与行程同步。
+ */
+
 import type { ItineraryItem, SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
 import { getDateRange, getDaysBetween, getWeekday } from '@/utils/date'
 import { findCity } from '@/utils/masterDataLookup'
 
+/** 根据城市类型返回餐补每日标准金额（元） */
 export function getMealStandard(cityType: string): number {
   switch (cityType) {
     case '1':
@@ -15,16 +20,19 @@ export function getMealStandard(cityType: string): number {
   }
 }
 
+/** 交通补助每日标准金额（元） */
 export const TRANSPORT_STANDARD = 40
+/** 通讯补助每日标准金额（元） */
 export const COMM_STANDARD = 40
 
+/** 根据城市编号查主数据，返回城市类型，默认三类城市 */
 export function getCityType(cityNo: string): string {
   return findCity(cityNo)?.cityType ?? '3'
 }
 
 type SubsidyCell = SubsidyDayItem['meal']
 
-/** 未勾选项展示标准额（兼容后端 calendar 里 amount=0 的历史数据） */
+/** 规范化单日补助单元格：未勾选时 amount 取标准值，勾选时保留实际金额 */
 export function normalizeSubsidyCell(cell: Partial<SubsidyCell> | undefined): SubsidyCell {
   const standard = Number(cell?.standard ?? 0)
   const checked = !!cell?.checked
@@ -36,7 +44,7 @@ export function normalizeSubsidyCell(cell: Partial<SubsidyCell> | undefined): Su
   }
 }
 
-/** 打开补助日历时规范化展示：未勾选行的输入框显示默认标准额 */
+/** 规范化整个补助日历，统一处理餐补、交通、通讯三列 */
 export function normalizeSubsidyCalendar(calendar: SubsidyDayItem[]): SubsidyDayItem[] {
   return calendar.map((day) => ({
     ...day,
@@ -46,6 +54,7 @@ export function normalizeSubsidyCalendar(calendar: SubsidyDayItem[]): SubsidyDay
   }))
 }
 
+/** 根据出差起止日期和到达城市，生成每日补助日历（含标准和默认未勾选状态） */
 export function createSubsidyCalendar(
   startDate: string,
   endDate: string,
@@ -66,6 +75,7 @@ export function createSubsidyCalendar(
   }))
 }
 
+/** 汇总日历中已勾选补助的实际金额、标准合计及分项合计 */
 export function calcCalendarTotals(calendar: SubsidyDayItem[]) {
   let subsidyAmount = 0
   let standardTotal = 0
@@ -92,6 +102,7 @@ export function calcCalendarTotals(calendar: SubsidyDayItem[]) {
   return { subsidyAmount, standardTotal, mealTotal, transportTotal, commTotal }
 }
 
+/** 根据单条行程生成对应的补助信息（含日历和各项合计） */
 export function buildSubsidyFromItinerary(it: ItineraryItem): SubsidyInfoItem {
   const days = getDaysBetween(it.startDate, it.endDate)
   const calendar = createSubsidyCalendar(it.startDate, it.endDate, it.arriveCityNo, it.arriveCityName)
@@ -116,7 +127,7 @@ export function buildSubsidyFromItinerary(it: ItineraryItem): SubsidyInfoItem {
   }
 }
 
-/** 补助仅随补录行程存在：剔除孤儿补助，并为缺失行程生成默认补助行 */
+/** 使补助列表与行程列表一一对应：保留已有补助，缺失的按行程自动生成 */
 export function syncSubsidiesWithItineraries(
   itineraries: ItineraryItem[],
   subsidies: SubsidyInfoItem[],

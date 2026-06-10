@@ -1,6 +1,7 @@
 /**
- * 5.3 控件数据（写死在前端，与需求文档一致）
+ * 本地主数据：公司、部门、报销人、业务类型、城市、项目。
  */
+
 import type {
   BusinessType,
   City,
@@ -10,7 +11,7 @@ import type {
   Reimburser,
 } from '@/types/reimburse'
 
-/** 5.3.1 费用归属公司 */
+/** 费用归属公司列表 */
 export const REIM_COMPANIES: ReimCompany[] = [
   { reimCompanyId: '1C54557F1782E000', reimCompanyNo: '0407', reimCompanyName: '胜意科技北京分公司' },
   { reimCompanyId: '19218A262C976000', reimCompanyNo: '0408', reimCompanyName: '胜意科技上海分公司' },
@@ -19,7 +20,7 @@ export const REIM_COMPANIES: ReimCompany[] = [
   { reimCompanyId: '16AE93CC7EF92002', reimCompanyNo: '0411', reimCompanyName: '胜意科技荆州分公司' },
 ]
 
-/** 5.3.2 报销部门 */
+/** 报销部门列表 */
 export const REIM_DEPARTMENTS: ReimDepartment[] = [
   { reimDepartmentId: '13AB8D7B52A9B002', reimDepartmentNo: '072001', reimDepartmentName: '客户成功事业部' },
   { reimDepartmentId: '13BFD31C6029A002', reimDepartmentNo: '072002', reimDepartmentName: '企业消费事业部' },
@@ -30,7 +31,7 @@ export const REIM_DEPARTMENTS: ReimDepartment[] = [
   { reimDepartmentId: '14055D22BB808001', reimDepartmentNo: '072007', reimDepartmentName: '营销事业部' },
 ]
 
-/** 5.3.3 员工 */
+/** 报销人 / 出行人员列表 */
 export const REIMBURSERS: Reimburser[] = [
   { reimburserId: '13AB3A3F72409002', reimburserNo: '74541', reimburserName: '徐年年' },
   { reimburserId: '13AB498CC6409002', reimburserNo: '74008', reimburserName: '郑雨雪' },
@@ -40,7 +41,7 @@ export const REIMBURSERS: Reimburser[] = [
   { reimburserId: '13AB7925EB808001', reimburserNo: '10503', reimburserName: '姜林' },
 ]
 
-/** 5.3.4 业务类型 */
+/** 业务类型树形数据 */
 export const BUSINESS_TYPES: BusinessType[] = [
   { businessTypeId: '18F0916A8C2C4000', businessTypeNo: '1001001', businessTypeName: '员工差旅活动', thereSubordinateNode: '1', superiorId: 'none' },
   { businessTypeId: '18F091913EEC4000', businessTypeNo: '100100101', businessTypeName: '境内出差', thereSubordinateNode: '1', superiorId: '18F0916A8C2C4000' },
@@ -58,7 +59,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   { businessTypeId: '13AB3A422A808001', businessTypeNo: '100100303', businessTypeName: '员工体检', thereSubordinateNode: '0', superiorId: '13AB3A41CD808002' },
 ]
 
-/** 5.3.5 城市（cityType: 1一线 2二线 3三线） */
+/** 城市列表（含 cityType 用于补助标准） */
 export const CITIES: City[] = [
   { cityNo: '10119', cityName: '北京', cityType: '1' },
   { cityNo: '10621', cityName: '上海', cityType: '1' },
@@ -67,7 +68,7 @@ export const CITIES: City[] = [
   { cityNo: '10455', cityName: '荆州', cityType: '3' },
 ]
 
-/** 5.3.6 项目 */
+/** 项目列表 */
 export const PROJECTS: Project[] = [
   { projectId: '12BC248B25083001', projectNo: 'nonProjectRelated', projectName: '非项目类费用归集' },
   { projectId: '1C811ABF96195000', projectNo: 'centralChina', projectName: '华中客户定制化项目' },
@@ -79,6 +80,7 @@ export const PROJECTS: Project[] = [
   { projectId: '162664B8526BE002', projectNo: 'northEast', projectName: '东北客户定制化项目' },
 ]
 
+/** 主数据聚合对象，供 lookup 与 composable 使用 */
 export const MASTER_DATA = {
   companies: REIM_COMPANIES,
   departments: REIM_DEPARTMENTS,

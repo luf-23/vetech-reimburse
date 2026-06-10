@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 补录行程列表区块。
+ * 表格展示已补录行程，标题栏「补录行程」打开 ItineraryDialog；行内支持删除、编辑、复制。
+ */
 import { CirclePlus, CopyDocument, Delete, Edit } from '@element-plus/icons-vue'
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import type { ItineraryItem } from '@/types/reimburse'

@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * 费用归属及分摊区块。
+ * 表格展示多行分摊：费用归属公司、项目、分摊比例与分摊金额。
+ * 首行比例为只读（由父组件计算），其余行可编辑比例；表头刷新图标触发均摊（equal-split）。
+ * 底部支持添加行、删除行，合计行展示 totalRatio 与 totalAmount，标题栏显示待分摊总额 expenseTotal。
+ * 业务计算（比例联动金额、均摊）由父组件 composable 处理，本组件仅负责展示与事件转发。
+ */
 import { CirclePlus, Delete, Refresh } from '@element-plus/icons-vue'
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import type { AllocationItem, Project, ReimCompany } from '@/types/reimburse'

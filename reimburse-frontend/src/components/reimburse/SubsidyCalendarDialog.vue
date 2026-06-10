@@ -1,4 +1,18 @@
 <script setup lang="ts">
+/**
+ * 补助日历编辑弹窗。
+ * 左侧展示出差类型、行程摘要与金额汇总；右侧为按日期的补助勾选与金额录入表格。
+ *
+ * 行/列/全选联动：
+ * - 行：toggleDay 勾选/取消该行餐费、交通、通讯三项；
+ * - 列：toggleCol 勾选/取消该补助类型在所有日期上的项；
+ * - 全选：onSelectAllChange 批量设置全部单元格；
+ * - isDayIndeterminate / isColIndeterminate 控制半选态显示。
+ *
+ * calcCalendarTotals 用法：
+ * - 对 calendar 响应式数组求和，返回 subsidyAmount（已勾选实际金额）与 standardTotal（标准总额）；
+ * - 用于侧边栏汇总展示，勾选或改金额后自动更新。
+ */
 import { computed, ref, watch } from 'vue'
 import { Location } from '@element-plus/icons-vue'
 import type { SubsidyDayItem, SubsidyInfoItem } from '@/types/reimburse'
@@ -8,7 +22,7 @@ import { formatMoney } from '@/utils/format'
 const props = defineProps<{
   visible: boolean
   subsidy: SubsidyInfoItem | null
-  /** 5.2.2.4-1 与主单业务类型一致 */
+
   businessTypeName: string
 }>()
 
@@ -39,10 +53,9 @@ watch(
   },
 )
 
-/** 5.2.2.4-4 / 5.2.2.4-5 仅统计已勾选项 */
+/** 根据 calendar 实时汇总已勾选补助金额与标准总额，驱动侧边栏展示 */
 const totals = computed(() => calcCalendarTotals(calendar.value))
 
-/** 5.2.2.4-3 行程中间行：城市与天数 */
 const routeParts = computed(() => {
   if (!props.subsidy) return { middle: '', days: '' }
   const parts = props.subsidy.route.split('-')
@@ -63,7 +76,6 @@ function countAllChecks() {
   return { total, checked }
 }
 
-/** 5.2.2.4-7 当前行全部选中时，出差日期复选框才为选中 */
 function isDayAllChecked(day: SubsidyDayItem): boolean {
   return SUB_KEYS.every((key) => day[key].checked)
 }
@@ -73,7 +85,6 @@ function isDayIndeterminate(day: SubsidyDayItem): boolean {
   return checkedCount > 0 && checkedCount < SUB_KEYS.length
 }
 
-/** 5.2.2.4-6 当前列全部选中时，表头复选框才为选中 */
 function isColAllChecked(key: SubKey): boolean {
   return calendar.value.length > 0 && calendar.value.every((d) => d[key].checked)
 }
@@ -83,13 +94,11 @@ function isColIndeterminate(key: SubKey): boolean {
   return n > 0 && n < calendar.value.length
 }
 
-/** 5.2.2.4-9 全选：仅当日历内每一个复选框都选中时才为选中态 */
 const selectAllChecked = computed(() => {
   const { total, checked } = countAllChecks()
   return total > 0 && checked === total
 })
 
-/** 仅选中部分列/行时，全选保持未勾选（不显示半选） */
 const selectAllIndeterminate = computed(() => false)
 
 function onSelectAllChange(checked: boolean) {
@@ -100,14 +109,14 @@ function onSelectAllChange(checked: boolean) {
   })
 }
 
-/** 5.2.2.4-6 横向：出差日期列选中整行 */
+/** 行全选：切换某日餐费/交通/通讯三项勾选状态 */
 function toggleDay(day: SubsidyDayItem, checked: boolean) {
   for (const key of SUB_KEYS) {
     setSubsidyChecked(day, key, checked)
   }
 }
 
-/** 5.2.2.4-7 纵向：表头选中整列 */
+/** 列全选：切换某补助类型在所有日期上的勾选状态 */
 function toggleCol(key: SubKey, checked: boolean) {
   calendar.value.forEach((day) => {
     setSubsidyChecked(day, key, checked)
@@ -121,7 +130,6 @@ function setSubsidyChecked(day: SubsidyDayItem, key: SubKey, checked: boolean) {
   }
 }
 
-/** 5.2.2.4-9 未选中不可编辑；仅正数且不大于标准额 */
 function onAmountChange(day: SubsidyDayItem, key: SubKey, val: number | null | undefined) {
   if (!day[key].checked) return
   let num = val ?? 0
@@ -147,7 +155,7 @@ function handleConfirm() {
     @update:model-value="emit('update:visible', $event)"
   >
     <div v-if="subsidy" class="calendar-layout">
-      <!-- 左侧：出差类型、日期轴、金额汇总 -->
+      
       <div class="calendar-sidebar">
         <div class="sidebar-type">
           <span class="sidebar-type-label">出差类型</span>
@@ -179,7 +187,7 @@ function handleConfirm() {
         </div>
       </div>
 
-      <!-- 右侧：补助日历表 -->
+      
       <div class="calendar-main">
         <div class="calendar-main-header">
           <span class="calendar-main-title">出差补助</span>
@@ -334,7 +342,6 @@ function handleConfirm() {
   font-size: 14px;
 }
 
-/* 行程明细框：三列网格，竖线与圆点同列居中 */
 .trip-detail-box {
   display: grid;
   grid-template-columns: 62px 24px 1fr;

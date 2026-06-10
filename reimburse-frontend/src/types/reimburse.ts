@@ -1,24 +1,32 @@
-/** 0草稿 1审批通过 2已作废 3审批中 */
+/**
+ * 差旅报销领域类型定义：主数据、列表、表单、行程、补助、分摊等。
+ */
+
+/** 单据状态：0 草稿 1 审批通过 2 已作废 3 审批中 */
 export type DocStatus = 0 | 1 | 2 | 3
 
+/** 费用归属公司 */
 export interface ReimCompany {
   reimCompanyId: string
   reimCompanyNo: string
   reimCompanyName: string
 }
 
+/** 报销部门 */
 export interface ReimDepartment {
   reimDepartmentId: string
   reimDepartmentNo: string
   reimDepartmentName: string
 }
 
+/** 报销人 / 出行人员 */
 export interface Reimburser {
   reimburserId: string
   reimburserNo: string
   reimburserName: string
 }
 
+/** 业务类型（树形，含是否有下级） */
 export interface BusinessType {
   businessTypeId: string
   businessTypeNo: string
@@ -27,18 +35,21 @@ export interface BusinessType {
   superiorId: string
 }
 
+/** 城市（含类型，用于补助标准） */
 export interface City {
   cityNo: string
   cityName: string
   cityType: string
 }
 
+/** 项目 */
 export interface Project {
   projectId: string
   projectNo: string
   projectName: string
 }
 
+/** 报销单列表行 */
 export interface ReimburseListItem {
   id: string
   reimburseNo: string
@@ -60,6 +71,7 @@ export interface ReimburseListItem {
   createTime: string
 }
 
+/** 补录行程单行 */
 export interface ItineraryItem {
   id: string
   travelerId: string
@@ -74,8 +86,10 @@ export interface ItineraryItem {
   description: string
 }
 
+/** 补助类型：餐补、交通、通讯 */
 export type SubsidyType = 'meal' | 'transport' | 'comm'
 
+/** 补助日历中单日明细 */
 export interface SubsidyDayItem {
   date: string
   weekday: string
@@ -88,6 +102,7 @@ export interface SubsidyDayItem {
   isPlanned?: boolean
 }
 
+/** 与一条行程对应的补助汇总（含日历） */
 export interface SubsidyInfoItem {
   id: string
   itineraryId: string
@@ -107,6 +122,7 @@ export interface SubsidyInfoItem {
   commTotal: number
 }
 
+/** 费用归属及分摊单行 */
 export interface AllocationItem {
   id: string
   costAttributionId: string
@@ -117,6 +133,7 @@ export interface AllocationItem {
   amount: number
 }
 
+/** 报销单完整表单数据 */
 export interface ReimburseFormData {
   id?: string
   reimburseNo?: string
@@ -134,6 +151,7 @@ export interface ReimburseFormData {
   remark: string
 }
 
+/** 列表页查询条件 */
 export interface ListQuery {
   reimburseNo: string
   title: string

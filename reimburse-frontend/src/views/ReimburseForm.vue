@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * 报销单表单页（新建 / 编辑）
+ *
+ * 纯视图层：组装各表单区块子组件与弹窗，状态与业务逻辑委托给 useReimburseForm。
+ * 路由参数 id 存在时为编辑模式，否则为新建。
+ */
+
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ItineraryDialog from '@/components/reimburse/ItineraryDialog.vue'

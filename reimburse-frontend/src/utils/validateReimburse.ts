@@ -1,9 +1,14 @@
+/**
+ * 报销表单前端校验：基本信息、行程、补助关联、分摊比例与金额等。
+ */
+
 import type { BusinessType, ItineraryItem, ReimburseFormData, SubsidyInfoItem } from '@/types/reimburse'
 import { MASTER_DATA } from '@/data/masterData'
 import { isBusinessTypeLeaf } from '@/utils/businessTypeTree'
 import { datesOverlap } from '@/utils/date'
 import { isItineraryDuplicate } from '@/utils/itinerary'
 
+/** 校验结果：是否通过及失败时的提示信息 */
 export interface ValidateResult {
   valid: boolean
   message: string
@@ -17,7 +22,7 @@ function ok(): ValidateResult {
   return { valid: true, message: '' }
 }
 
-/** 校验补助日历中勾选金额是否在 0 ~ 标准额 范围内 */
+/** 校验补助日历中已勾选金额是否在 0 到标准金额之间 */
 export function validateSubsidyAmounts(subsidies: SubsidyInfoItem[]): ValidateResult {
   for (const sub of subsidies) {
     for (const day of sub.calendar) {
@@ -41,7 +46,7 @@ export function validateSubsidyAmounts(subsidies: SubsidyInfoItem[]): ValidateRe
   return ok()
 }
 
-/** 校验行程列表是否存在同人员日期重复 */
+/** 校验行程列表：必填项、同一人日期不重叠、无重复行程 */
 export function validateItineraryList(itineraries: ItineraryItem[]): ValidateResult {
   for (let i = 0; i < itineraries.length; i++) {
     const a = itineraries[i]!
@@ -67,7 +72,7 @@ export function validateItineraryList(itineraries: ItineraryItem[]): ValidateRes
   return ok()
 }
 
-/** 补助信息必须与补录行程一一对应 */
+/** 校验补助与行程一一对应：数量一致、每条行程有且仅有一条补助 */
 export function validateItinerarySubsidyLink(
   itineraries: ItineraryItem[],
   subsidies: SubsidyInfoItem[],
@@ -99,7 +104,7 @@ export function validateItinerarySubsidyLink(
   return ok()
 }
 
-/** 5.2.2.2 基础信息：全部必填 */
+/** 校验报销单基本信息：标题、报销人、部门、公司、末级业务类型、事由及字数限制 */
 export function validateBasicInfo(
   form: ReimburseFormData,
   businessTypes: BusinessType[] = MASTER_DATA.businessTypes,
@@ -118,6 +123,7 @@ export function validateBasicInfo(
   return ok()
 }
 
+/** 校验完整报销表单：依次校验基本信息、行程、补助、分摊比例与金额合计 */
 export function validateReimburseForm(
   form: ReimburseFormData,
   subsidyTotal: number,

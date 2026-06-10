@@ -1,3 +1,7 @@
+/**
+ * 报销数据补全：根据 ID 从主数据填充名称等展示字段。
+ */
+
 import type {
   ItineraryItem,
   ReimburseFormData,
@@ -13,7 +17,7 @@ import {
   findReimburser,
 } from '@/utils/masterDataLookup'
 
-/** 接口只带 ID 时，用本地主数据补全列表展示字段 */
+/** 补全列表行中的报销人、部门、公司、业务类型名称 */
 export function enrichListItem(row: ReimburseListItem): ReimburseListItem {
   const r = findReimburser(row.reimburserId)
   const d = findDepartment(row.departmentId)
@@ -53,7 +57,7 @@ function enrichSubsidy(sub: SubsidyInfoItem): SubsidyInfoItem {
   }
 }
 
-/** 接口只带 ID 时，用本地主数据补全详情/表单展示字段 */
+/** 补全表单中行程、补助、分摊行的主数据名称 */
 export function enrichReimburseForm(data: ReimburseFormData): ReimburseFormData {
   return {
     ...data,

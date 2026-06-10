@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 基础信息区块。
+ * 报销单主表字段：标题、报销人、部门、费用归属公司、业务类型（树形选择）及出差事由。
+ */
 import type { TreeNode } from '@/utils/businessTypeTree'
 import SectionPanel from '@/components/reimburse/SectionPanel.vue'
 import type { ReimCompany, ReimDepartment, ReimburseFormData, Reimburser } from '@/types/reimburse'
