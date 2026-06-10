@@ -10,9 +10,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.Optional;
 
-/**
- * 报销主表旁路缓存：读路径在此编排（先 Redis，未命中再 DB 并回填）；写路径由业务层先写 DB 后 {@link #evict}。
- */
 @Service
 public class ReimburseDocCacheService {
 
@@ -26,9 +23,7 @@ public class ReimburseDocCacheService {
     @Value("${reimburse.cache.doc-ttl:1h}")
     private Duration docTtl;
 
-    /**
-     * 旁路缓存读：先查 Redis，未命中再查 MySQL 并回填。
-     */
+     //旁路缓存读：先查 Redis，未命中再查 MySQL 并回填。
     public ReimburseDoc loadById(Long id) {
         Optional<ReimburseDoc> cached = get(id);
         if (cached.isPresent()) {

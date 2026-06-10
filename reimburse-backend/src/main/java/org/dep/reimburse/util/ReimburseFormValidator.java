@@ -21,6 +21,7 @@ public final class ReimburseFormValidator {
     }
 
     public static ValidateResultVO validate(ReimburseFormDTO form, BigDecimal subsidyTotal) {
+        // 先校验主表必填项，保证单据基础信息完整
         if (!StringUtils.hasText(form.getTitle())) {
             return ValidateResultVO.fail("请输入报销标题");
         }
@@ -39,6 +40,7 @@ public final class ReimburseFormValidator {
         if (!StringUtils.hasText(form.getReason())) {
             return ValidateResultVO.fail("请输入出差事由");
         }
+        // 字段长度与数据库表结构保持一致，避免入库时字段超长
         if (form.getTitle().length() > 500) {
             return ValidateResultVO.fail("报销标题不可超过500字");
         }
@@ -52,15 +54,18 @@ public final class ReimburseFormValidator {
         List<ItineraryItem> itineraries = form.getItineraries() != null ? form.getItineraries() : List.of();
         List<SubsidyInfoItem> subsidies = form.getSubsidies() != null ? form.getSubsidies() : List.of();
 
+        // 报销单必须至少包含一条行程，补助信息也必须基于行程生成
         if (itineraries.isEmpty()) {
             return ValidateResultVO.fail("请补录行程");
         }
 
+        // 校验行程和补助的一一对应关系，防止补助挂错或重复挂到同一行程
         ValidateResultVO itinerarySubsidy = validateItinerarySubsidyLink(itineraries, subsidies);
         if (!itinerarySubsidy.isValid()) {
             return itinerarySubsidy;
         }
 
+        // 校验每条行程自身的必填字段
         for (ItineraryItem it : itineraries) {
             if (!StringUtils.hasText(it.getTravelerId())) {
                 return ValidateResultVO.fail("补录行程出行人员不能为空");
@@ -84,6 +89,7 @@ public final class ReimburseFormValidator {
             return ValidateResultVO.fail("请填写费用归属及分摊信息");
         }
 
+        // 分摊比例使用 0~1 小数表示，合计应为 1，也就是前端显示的 100%
         BigDecimal ratioSum = form.getAllocations().stream()
                 .map(a -> a.getRatio() != null ? a.getRatio() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -92,6 +98,7 @@ public final class ReimburseFormValidator {
         }
 
         if (subsidyTotal != null) {
+            // 分摊金额合计必须等于补助总金额，保证财务金额前后一致
             BigDecimal amountSum = form.getAllocations().stream()
                     .map(a -> a.getAmount() != null ? a.getAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -118,6 +125,7 @@ public final class ReimburseFormValidator {
             return ValidateResultVO.ok();
         }
 
+        // 收集前端行程 id，后续用于判断补助是否关联了本单据内的有效行程
         Set<String> itineraryIds = new HashSet<>();
         for (ItineraryItem it : itineraries) {
             if (StringUtils.hasText(it.getId())) {
@@ -131,6 +139,7 @@ public final class ReimburseFormValidator {
             return ValidateResultVO.fail("补助信息须与补录行程一一对应");
         }
 
+        // linkedItineraryIds 用于识别重复关联，并最终确认每条行程都维护了补助
         Set<String> linkedItineraryIds = new HashSet<>();
         for (SubsidyInfoItem sub : subsidies) {
             if (!StringUtils.hasText(sub.getItineraryId())) {
