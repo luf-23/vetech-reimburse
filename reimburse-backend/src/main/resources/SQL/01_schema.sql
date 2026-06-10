@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS reimburse_itinerary (
 CREATE TABLE IF NOT EXISTS reimburse_subsidy (
     id               BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键ID' PRIMARY KEY,
     doc_id           BIGINT        NOT NULL COMMENT '报销单ID',
-    itinerary_id     BIGINT        NULL COMMENT '关联行程ID，为空表示未关联具体行程',
+    itinerary_id     BIGINT        NOT NULL COMMENT '关联行程ID，补助必须绑定具体行程',
     traveler_id      VARCHAR(32)   NOT NULL COMMENT '出行人ID',
     start_date       DATE          NOT NULL COMMENT '补助开始日期',
     end_date         DATE          NOT NULL COMMENT '补助结束日期',
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS reimburse_subsidy (
     comm_total       DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '通讯补助合计',
     calendar_json    JSON          NULL COMMENT '日历明细JSON',
     KEY idx_subsidy_doc (doc_id),
-    KEY idx_subsidy_itinerary (itinerary_id),
+    UNIQUE KEY uk_subsidy_itinerary (itinerary_id),
     CONSTRAINT fk_subsidy_doc FOREIGN KEY (doc_id) REFERENCES reimburse_doc (id) ON DELETE CASCADE,
     CONSTRAINT fk_subsidy_itinerary FOREIGN KEY (itinerary_id) REFERENCES reimburse_itinerary (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='报销补助明细';
